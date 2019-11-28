@@ -1,0 +1,47 @@
+#!/bin/bash
+opts=
+opts_parse_done=0
+
+set -e
+
+while [ $# -gt 0 ] ; do
+
+	if [ $opts_parse_done -eq 0 ] ; then
+
+		case "$1" in
+		-*)
+			[ "x$1" = "x--" ] && opts_parse_done=1
+			# None of the options to rm(1) are keyed.
+			opts="$opts $1"
+			;;
+		*)
+			opts_parse_done=1
+			;;
+		esac
+
+	fi
+
+	if [ $opts_parse_done -eq 1 ] ; then
+
+		abspath_file=$(_abspath "$1")
+
+		if [ "x$abspath_file" = "x/" ] ; then
+
+			cat <<EOF >&2
+${0##*/}: ERROR : not removing \`$1' to avoid removing root directory\!
+EOF
+			false
+
+		else
+
+			if [ "x${SIMULATE_RM:-1}" != x1 ] ; then
+				rm ${opts:--f} "$abspath_file"
+			fi
+
+		fi
+
+	fi
+
+	shift
+
+done

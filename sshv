@@ -1,0 +1,53 @@
+#!/bin/bash
+
+set -u
+
+ssh_config="$HOME/.ssh/config"
+
+uname=$(uname)
+urel=$(uname -r)
+hostname=$(uname -n)
+domain=$(sed -n 's/^domain \(.*\)$/\1/p' /etc/resolv.conf)
+
+## ----------------------------------------------------------------------
+
+case "$uname" in
+SunOS)
+  uname="Solaris"
+  urel="${urel#*.}"
+  ;;
+*)
+  urel="${urel%%.*}"
+  ;;
+esac
+
+case "$domain" in
+lan.osstech.co.jp)
+  domain="osstech"
+  ;;
+lan.sfo.jp)
+  domain="sfo"
+  ;;
+esac
+
+## ======================================================================
+
+ssh_config_list=(
+  "$ssh_config.$hostname"
+  "$ssh_config.$domain"
+  "$ssh_config.$uname$urel"
+  "$ssh_config.$uname"
+)
+
+for ssh_config in "${ssh_config_list[@]}"; do
+  if [[ -f $ssh_config ]]; then
+    set -- -F "$ssh_config" "$@"
+  fi
+done
+
+## ======================================================================
+
+set -- "/usr/bin/${0##*/}" "$@"
+
+echo "$*" 1>&2
+exec "$@"

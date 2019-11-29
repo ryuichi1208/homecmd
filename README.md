@@ -1,2 +1,3 @@
 # homecmd
-Homebrew commands used at home
+
+潰そうと思ったサーバから出てきたスクリプトとか置き場

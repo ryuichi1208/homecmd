@@ -1,0 +1,15 @@
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+use Proc::ProcessTable;
+
+my $Processtable = new Proc::ProcessTable;
+
+foreach my $item (@{$Processtable->table}){
+        my $pctcpu = sprintf("%5.1f", $item->pctcpu);
+        my $pctmem = sprintf("%5.1f", $item->pctmem);
+        if($pctcpu > 50){
+                print $item->pid ." ". getpwuid($item->uid) ." " . $pctcpu . " ". $pctmem ." ". $item->cmndline . "\n";
+        }
+}

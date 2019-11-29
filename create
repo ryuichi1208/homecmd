@@ -1,0 +1,35 @@
+#!/bin/bash
+
+pushd "$TEST_PATH" >/dev/null
+
+set --	\
+	:$PWD								\
+	.:$PWD								\
+	foo/bar:$PWD/foo/bar						\
+	/foo/bar:/foo/bar						\
+	/foo/../bar:/bar				 		\
+	/foo/bar/../baz:/foo/baz				 	\
+	/foo/bar/../baz/:/foo/baz				 	\
+	/foo/../bar/:/bar 						\
+	/foo/../bar/..:/ 						\
+	/foo/../bar/../:/ 						\
+	/foo/bar/../baz:/foo/baz				 	\
+	/foo/./bar:/foo/bar				 		\
+	/./foo/./bar:/foo/bar						\
+	/foo//bar:/foo/bar						\
+	//foo/bar:/foo/bar						\
+	//////foo/bar:/foo/bar						\
+	/foo/////bar:/foo/bar						\
+	/a/b/c/.././:/a/b						\
+	/.foo:/.foo							\
+	./.foo:$PWD/.foo						\
+	/.foo/.bar:/.foo/.bar						\
+	./.foo/.bar:$PWD/.foo/.bar					\
+	/scratch/ltp/testcases/realtime/../..:/scratch/ltp		\
+	..:$(dirname "$TEST_PATH")					\
+	../..:$(dirname "$(dirname "$TEST_PATH")")			\
+	testcases/kernel/controllers/libcontrollers/../../../..:$PWD
+
+: $(( TST_COUNT += 1 ))
+
+exit ${FAILED:=0}

@@ -1,0 +1,43 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]; then
+  echo "Invalid arguments" 1>&2
+  echo "Usage : $(basename $0) URL"
+  exit 1
+fi
+
+URL=$1
+
+if [[ $(echo ${URL} | grep "/") ]]; then
+  DOMAIN=$(echo ${URL} | awk -F/ '{print $3}')
+else
+  DOMAIN=${URL}
+fi
+
+SERVER_IP=$(host ${DOMAIN}| head -n1 | awk '{print $4}')
+CLIENT_IP=$(curl -s inet-ip.info)
+
+host ${DOMAIN} > /dev/null 2>&1 ; RET=$?
+if [[ ${RET} -ne 0 ]]; then
+  echo "nslookup failed"
+else
+  curl ${URL} -sLo /dev/null -w \
+    "  === INFO ===\n\
+  Exec Date         : $(date "+%Y/%m/%d %H:%M:%S")\n\
+  Client IP         : ${CLIENT_IP}\n\
+  Server IP         : ${SERVER_IP}\n\
+  Request URL       : %{url_effective}\n\
+  === Request ===\n\
+  DNS Lookup        : %{time_namelookup} [s]\n\
+  TCP Connection    : %{time_connect} [s]\n\
+  SSL Connection    : %{time_appconnect} [s]\n\
+  Server Processing : %{time_pretransfer} [s]\n\
+  Content Transfer  : %{time_starttransfer} [s]\n\
+  === Result ===\n\
+  Total TIme        : %{time_total} [s]\n\
+  HTTP Status Code  : %{http_code}\n\
+  SSL Veryfi Code   : %{ssl_verify_result}\n\
+  Num Redirects     : %{num_redirects}\n\
+  Downloads Size    : %{size_download} [byte]\n\
+  Downloads Speed   : %{speed_download} [byte/s]\n"
+fi

@@ -2,6 +2,20 @@
 
 PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 
+orig_month()
+{
+  perl -le 'print((localtime)[4])'
+  echo "print ((new Date).getMonth())" | js
+  ruby -e 'p Time.now.month'
+  ruby -rdate -e 'p Date.today.month'
+  perl -MDateTime -le 'print DateTime->now->month'
+  perl -MTime::Piece -le 'print Time::Piece->new->mon'
+  python -c 'import time; print time.localtime()[1]'
+  python -c 'import datetime; print datetime.datetime.today().month'
+  php -r '$a = getdate(); echo $a["mon"], "\n";'
+  gosh -usrfi-19 -e '(print (date-month (current-date)))' -E exit
+}
+
 tst_cmd_available()
 {
 	if type command > /dev/null 2>&1; then

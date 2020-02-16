@@ -7,9 +7,9 @@
 set -euC
 
 # 定数
-DOCKER_CMD=$(which docker)
-DOCKER_RUN_OPTS="container run --shm-size=1g --rm -v $(pwd):/sitespeed.io"
-DOCKER_IMAGE="sitespeedio/sitespeed.io"
+readonly DOCKER_CMD=$(which docker)
+readonly DOCKER_RUN_OPTS="container run --shm-size=1g --rm -v $(pwd):/sitespeed.io"
+readonly DOCKER_IMAGE="sitespeedio/sitespeed.io"
 
 # テスト対象URL
 TEST_URL=""

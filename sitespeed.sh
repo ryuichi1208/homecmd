@@ -25,8 +25,10 @@ function usage()
 {
     cat <<EOS >&2
 Usage: $0 [-u テスト対象URL]
+  -u              テスト対象のURLを指定
   -v              sitespeed.ioのdockerイメージバージョン
   -a              ユーザーエージェント
+  -e              試行回数を指定
 EOS
   exit 1
 }

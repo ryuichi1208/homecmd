@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import argparse
+import os
+import re
+import requests
+import sys
+
+
+class pycolor:
+    BLACK = "\033[30m"
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
+    PURPLE = "\033[35m"
+    CYAN = "\033[36m"
+    WHITE = "\033[37m"
+    END = "\033[0m"
+
+
+def opt_parse():
+    """
+    Function for analyzing options.
+    """
+    parser = argparse.ArgumentParser(description="Requests Script")
+    parser.add_argument("input_file", help="Input file path")
+    parser.add_argument("--info", "-i", action="store_const", const=True, default=False)
+    args = parser.parse_args()
+
+    return args
+
+
+def extraction_url(fd):
+    """
+    Extract only valid urls from the passed file descriptor.
+    """
+    pattern = "https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"
+    return [line.rstrip("\n") for line in fd if re.match(pattern, line)]
+
+
+def open_files(file_path: str):
+    """
+    Opens the specified file for reading only.
+    """
+    if os.path.isfile(file_path):
+        with open(file_path, mode="r") as fd:
+            return extraction_url(fd)
+    else:
+        print(f"No such file : {file_path}")
+
+
+def exec_requests(url_list):
+    """
+    The request result is displayed in the following format.
+        URL StatusCode ResponseTime ContentSize
+    """
+    for url in url_list:
+        res = requests.get(url)
+        if res.status_code != 200:
+            print(
+                pycolor.RED
+                + f"{url} {res.status_code} {res.elapsed.total_seconds()}[s] {len(res.content)}[B]"
+                + pycolor.END
+            )
+        else:
+            print(
+                f"{url} {res.status_code} {res.elapsed.total_seconds()}[s] {len(res.content)}[B]"
+            )
+
+
+def main(argv):
+    parse = opt_parse()
+
+    url_list = open_files(parse.input_file)
+
+    exec_requests(url_list)
+
+
+if __name__ == "__main__":
+    main(sys.argv)

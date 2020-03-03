@@ -1,0 +1,85 @@
+#!/bin/bash
+
+set -e
+
+[ -z "$BASH_UTILS_VERSION" ] && { \
+    source "$(dirname "${BASH_SOURCE[0]}")/bash-utils-core" || \
+        { echo "> ${BASH_SOURCE[0]}:${LINENO}: bash-utils-core not found!" >&2; exit 1; }; \
+};
+
+#### Bash-Utils command ####
+
+CMD_NAME="$BASH_UTILS_NAME"
+CMD_VERSION="$BASH_UTILS_VERSION"
+CMD_COPYRIGHT="$BASH_UTILS_COPYRIGHT"
+CMD_LICENSE="$BASH_UTILS_LICENSE"
+CMD_SOURCES="$BASH_UTILS_SOURCES"
+CMD_DESCRIPTION="$BASH_UTILS_DESCRIPTION"
+CMD_SYNOPSIS="$BASH_UTILS_SYNOPSIS"
+CMD_USAGE="$BASH_UTILS_USAGE"
+CMD_HELP="$BASH_UTILS_HELP";
+CMD_OPTS_SHORT=("${BASH_UTILS_OPTS_SHORT[@]}")
+CMD_OPTS_LONG=("${BASH_UTILS_OPTS_LONG[@]}")
+CMD_ARGS=("${BASH_UTILS_ARGS[@]}")
+TO_DEBUG[${#TO_DEBUG[@]}]=BASH_UTILS_KEY
+TO_DEBUG[${#TO_DEBUG[@]}]=BASH_UTILS_VERSION
+TO_DEBUG[${#TO_DEBUG[@]}]=BASH_UTILS
+TO_DEBUG[${#TO_DEBUG[@]}]=BASH_UTILS_ROOT
+TO_DEBUG[${#TO_DEBUG[@]}]=BASH_UTILS_MODULES
+set_env_array CMD_OPTS_SHORT CMD_OPTS_SHORT[@]
+set_env_array CMD_OPTS_LONG CMD_OPTS_LONG[@]
+set_env_array CMD_ARGS CMD_ARGS[@]
+set_env_array TO_DEBUG TO_DEBUG[@]
+
+[ $# -eq 0 ] && usage_info && exit 1;
+rearrange_options "$@"
+[ -n "$CMD_REQ" ] && eval set -- "$CMD_REQ";
+common_options "$@"
+read_from_pipe
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -e | --exec* )
+            OPTARG="$(echo "$2" | cut -d'=' -f2)"
+            arg="${OPTARG}"
+            [ -z "$arg" ] && arg="$PIPED_INPUT";
+            if [ -f "$arg" ]; then
+                source "$arg"
+            else
+                eval "$arg"
+            fi
+            exit $?
+            ;;
+        -- ) shift; break;;
+        * )  ! is_known_option "$1" && error "unknown option '$1'";;
+    esac
+    shift
+done
+
+[ $# -eq 0 ] && usage_info && exit 1;
+while [ $# -gt 0 ]; do
+    case "$1" in
+        'about')    if [ $# -gt 1 ] && (module_exists "$2" 2>/dev/null || false); then
+                        load_module_info "$2"
+                    fi
+                    version_info && exit 0;;
+        'debug')    debug && exit 0;;
+        'help')     if [ $# -gt 1 ] && (module_exists "$2" 2>/dev/null || false); then
+                        load_module_info "$2"
+                    fi
+                    help_info && exit 0;;
+        'modules')  load_modules_list
+                    help_info && exit 0;;
+        'usage')    if [ $# -gt 1 ] && (module_exists "$2" 2>/dev/null || false); then
+                        load_module_info "$2"
+                    fi
+                    usage_info && exit 0;;
+        'version')  if [ $# -gt 1 ] && (module_exists "$2" 2>/dev/null || false); then
+                        load_module_info "$2"
+                    fi
+                    version_info true && exit 0;;
+        *)          error "unknown argument '$1'";;
+    esac
+    shift
+done
+
+exit 0

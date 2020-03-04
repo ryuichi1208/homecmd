@@ -27,3 +27,17 @@ function check_platform() {
 function is_running() {
     ps -p "$1" &> /dev/null
 }
+
+function rhel_major_version() {
+  major_version=$(cat /etc/redhat-release 2> /dev/null | egrep -o "[0-9\.]+" | cut -d "." -f1)
+  if [[ $major_version =~ ^[0-9]+$ ]]; then
+    echo $major_version
+    return 0
+  fi
+  echo -1
+  return 255
+}
+
+function has() {
+  if type ${1} &>/dev/null ; then return 0 ; else return 1 ; fi
+}

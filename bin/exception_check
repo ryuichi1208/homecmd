@@ -1,0 +1,51 @@
+#!/usr/bin/env perl
+
+=head
+                        DESCRIPTION
+sshで指定したサーバのしていしたログのExceptionを確認するためのスクリプト
+=cut
+
+
+use strict;
+use warnings;
+use utf8;
+use Encode;
+
+use Term::ANSIColor qw( :constants );
+$Term::ANSIColor::AUTORESET = 1;
+
+my $hosts = ["192.168.1.144", "192.168.1.144"];
+my $ssh_user = "root";
+my $log_path = "/root/tomcat_log";
+
+sub which_cmd {
+    my ($cmd) = @_;
+    $cmd = "which " . $cmd;
+    open my $rs, "$cmd |" or die("error :$!");
+    my @rlist = <$rs>;
+    close $rs;
+    my $res = join '', @rlist;
+    chomp($res);
+    return $res;
+}
+
+my $ssh_bin = which_cmd "ssh";
+my $rsh_bin = which_cmd "rsh";
+
+sub print_info {
+    my ($host) = @_;
+    print "======================\n";
+    print "HOST : $host\n";
+}
+
+sub main {
+    my ($arg) = @_;
+    my $command;
+    foreach my $h (@$hosts) {
+        print_info $h;
+        $command = sprintf("%s %s %s %s", $ssh_bin, "-l $ssh_user", $h, "grep Exception $log_path");
+        system($command);
+    }
+}
+
+main

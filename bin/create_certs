@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo_clr() {
+    echo -e "${BLUE}$1${NC}"
+}
+
+MESSAGE="The command supports a single *required* parameter - a fully qualified domain name (example: myserver.com)"
+
+: ${1?$MESSAGE}
+if [ -z "$1" ]; then
+    echo "$MESSAGE"
+    exit 1
+fi
+
+DOMAIN_NAME=$1
+
+echo_clr "Creation of the $DOMAIN_NAME key..."
+
+openssl genrsa -out private/$DOMAIN_NAME.key.pem 2048
+
+echo_clr "Creation of the $DOMAIN_NAME certificate request..."
+openssl req \
+    -new -sha256 \
+    -config openssl.cnf \
+    -key private/$DOMAIN_NAME.key.pem \
+    -out csr/$DOMAIN_NAME.csr.pem
+
+echo_clr "Creation of the $DOMAIN_NAME certificate..."
+SERVER_CERT_EXT="
+[ server_cert ]
+basicConstraints = CA:FALSE
+nsCertType = server
+nsComment = \"OpenSSL Generated Server Certificate\"
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer:always
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName=@alt_names
+[ alt_names ]
+DNS.1 = $DOMAIN_NAME
+"
+openssl ca \
+    -config <(cat openssl.cnf <(printf "\n$SERVER_CERT_EXT")) \
+    -extensions server_cert \
+    -days 375 \
+    -notext \
+    -md sha256 \
+    -in csr/$DOMAIN_NAME.csr.pem \
+    -out certs/$DOMAIN_NAME.cert.pem
+
+echo_clr "Verify the certificate..."
+openssl verify -CAfile certs/ca-chain.cert.pem certs/$DOMAIN_NAME.cert.pem
+openssl x509 -noout -text -in certs/$DOMAIN_NAME.cert.pem
+cat certs/$DOMAIN_NAME.cert.pem certs/ca-chain.cert.pem > certs/$DOMAIN_NAME-chain.cert.pem

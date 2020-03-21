@@ -1,0 +1,87 @@
+name: Print Info
+
+on:
+  push:
+    branches: 
+      - master
+      - release/**
+  pull_request:
+    branches: 
+      - master
+    types: [opend, reopend, labeled, unlabeled]
+  schedule:
+    - cron: '0 0 * * *'
+      
+env:
+  EXTRA_PARH: /
+  DEBUG: true
+  
+jobs:
+  print_env_info:
+    runs-on: [ubuntu-18.04]
+    name: print_env_info
+    timeout-minutes: 30
+    steps:
+      - name: OS Info Print
+        continue-on-error: true
+        run: |
+          echo -e "-"
+          echo -e "##############"; echo "date"; date
+          echo -e "##############"; echo "users"; users
+          echo -e "##############"; echo "cat /etc/lsb-release"; cat /etc/lsb-release
+          echo -e "##############"; echo "uname -a"; uname -a
+          echo -e "##############"; echo "df -Th"; df -Th
+          echo -e "##############"; echo "lscpu"; lscpu
+          echo -e "##############"; echo "ls -l /lib"; ls -l /lib
+          echo -e "##############"; echo "ls -l /lib64"; ls -l /lib64
+          echo -e "##############"; echo "env"; env
+      - name: Env Print
+        run: |
+          echo "HOME               : ${HOME}"
+          echo "GITHUB_WORKFLOW    : ${GITHUB_WORKFLOW}"
+          echo "GITHUB_RUN_ID      : ${GITHUB_RUN_ID}"
+          echo "GITHUB_RUN_NUMBER  : ${GITHUB_RUN_NUMBER}"
+          echo "GITHUB_ACTION      : ${GITHUB_ACTION}"
+          echo "GITHUB_ACTIONS     : ${GITHUB_ACTIONS}"
+          echo "GITHUB_ACTOR       : ${GITHUB_ACTOR}"
+          echo "GITHUB_REPOSITORY  : ${GITHUB_REPOSITORY}"
+          echo "GITHUB_EVENT_NAME  : ${GITHUB_EVENT_NAME}"
+          echo "GITHUB_EVENT_PATH  : ${GITHUB_EVENT_PATH}"
+          echo "GITHUB_WORKSPACE   : ${GITHUB_WORKSPACE}"
+          echo "GITHUB_SHA         : ${GITHUB_SHA}"
+          echo "GITHUB_REF         : ${GITHUB_REF}"
+          echo "GITHUB_HEAD_REF    : ${GITHUB_HEAD_REF}"
+          echo "GITHUB_BASE_REF    : ${GITHUB_BASE_REF}"
+          
+  command_version_check:
+    runs-on: [ubuntu-18.04]
+    name: command_version_check
+    needs: [print_env_info]
+    steps:
+      - name: Bash version
+        run : |
+          bash --version
+      - name: sudo version
+        run: |
+          sudo --version
+      - name: OpenSSL version
+        run: |
+          openssl version
+      - name: Docker Version
+        run: |
+          docker version
+      - name: docker-compose Version
+        run: |
+          docker-compose version
+      - name: awk version
+        run: |
+          awk --version
+      - name: sed version
+        run: |
+          sed --version
+      - name: curl version
+        run: |
+          curl --version
+      - name: jq version
+        run: |
+          jq --version

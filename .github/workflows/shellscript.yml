@@ -21,4 +21,4 @@ jobs:
 
       - name: Lint
         run: |
-          for sh in $(find . -name *.sh); do echo "====== ${sh} =====" && shellcheck ${sh}; done
+          for sh in $(find . -name *.sh); do echo "====== ${sh} =====" && shellcheck ${sh} || echo; done

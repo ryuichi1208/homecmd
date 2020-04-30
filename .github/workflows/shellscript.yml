@@ -12,11 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+
       - name: Install
         run: |
           sudo apt-get update
           sudo apt-get install shellcheck
           shellcheck --version
-      - name: Linst
+
+      - name: Lint
         run: |
           for sh in $(find . -name *.sh); do echo "====== ${sh} =====" && shellcheck ${sh}; done

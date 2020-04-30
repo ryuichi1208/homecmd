@@ -19,5 +19,4 @@ jobs:
           shellcheck --version
       - name: Linst
         run: |
-          echo "==================="
-          find . -name *.sh | xargs -L 1 shellcheck
+          for sh in $(find . -name *.sh); do echo "====== ${sh} =====" && shellcheck ${sh}; done

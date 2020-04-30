@@ -1,0 +1,50 @@
+name: Docs Lint
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+
+jobs:
+  lint:
+    name: Install Linter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+
+      - name: Set up node
+        uses: actions/setup-node@v1
+        with:
+          node-version: '10.x'
+
+      - name: Install pipenv and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pipenv --upgrade-strategy=only-if-needed
+          pipenv install --dev
+
+      - name: Install
+        run: |
+          sudo apt-get update
+          pip install --user yamllint
+          npm install markdownlint markdownlint-cli --save-dev
+          npm install -g markdown-link-check
+
+      - name: Lint YAML
+        run: |
+          python -m yamllint --version
+          python -m yamllint ./docs/test.yml
+
+      - name: Lint Markdown
+        run: |
+          stat ./node_modules/.bin/markdownlint
+          echo "===== markdownlint ====="
+          ./node_modules/.bin/markdownlint ./docs/test.md
+          echo "===== markdown-link-check ====="
+          markdown-link-check ./docs/test.md

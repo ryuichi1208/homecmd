@@ -1,0 +1,23 @@
+name: ShellScript Lint
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+
+jobs:
+  lint:
+    name: Install ShellScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install
+        run: |
+          sudo apt-get update
+          sudo apt-get install shellcheck
+          shellcheck --version
+      - name: Linst
+        run: |
+          echo "==================="
+          find . -name *.sh | xargs -L 1 shellcheck

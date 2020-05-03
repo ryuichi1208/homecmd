@@ -46,18 +46,25 @@ jobs:
           echo "=== history ===" && docker image history --no-trunc ${IMAGE_NAME}:${IMAGE_VERSION}
           echo "=== inspect ===" && docker image inspect ${IMAGE_NAME}:${IMAGE_VERSION}
 
-      - name: Install trivy & Dockle
+      - name: Install Trivy & Dockle
         run: |
+          TRIVY_VERSION=$(curl --silent "https://api.github.com/repos/jgm/pandoc/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          DOCKLE_VERSION=$(curl --silent "https://api.github.com/repos/goodwithtech/dockle/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+          
+          echo "=== Install Trivy ${TRIVY_VERSION} ==="
           wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
           echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -cs) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
           sudo apt update
           sudo apt install --no-install-recommends trivy
-
           sudo snap install hub --classic
-
-          TRIVY_VERSION=$(curl --silent "https://api.github.com/repos/jgm/pandoc/releases/latest" | \
-                    grep '"tag_name":' | \
-                    sed -E 's/.*"([^"]+)".*/\1/')
           curl -L -o pandoc.deb https://github.com/jgm/pandoc/releases/download/${TRIVY_VERSION}/pandoc-${TRIVY_VERSION}-1-amd64.deb
-          sudo dpkg -i pandoc.deb
+          sudo dpkg -i pandoc.deb && rm pandoc.deb
+
+          echo "=== Install Dockle ${DOCKLE_VERSION} ==="
+          curl -L -o dockle.deb https://github.com/goodwithtech/dockle/releases/download/v${DOCKLE_VERSION}/dockle_${DOCKLE_VERSION}_Linux-64bit.deb
+          sudo dpkg -i dockle.deb && rm dockle.deb
+          
+      - name: Check Trivy & Dockle
+        run: |
           trivy --version
+          dockler --version

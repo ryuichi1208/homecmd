@@ -35,6 +35,7 @@ jobs:
           pip install --user yamllint
           npm install markdownlint markdownlint-cli --save-dev
           npm install -g markdown-link-check
+          npm install jsonlint -g
 
       - name: Lint YAML
         run: |
@@ -48,3 +49,7 @@ jobs:
           ./node_modules/.bin/markdownlint ./docs/test.md
           echo "===== markdown-link-check ====="
           markdown-link-check ./docs/test.md
+
+      - name: Lint Json
+        run: |
+          jsonlint ./docs/test.json

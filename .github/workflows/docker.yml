@@ -20,8 +20,10 @@ jobs:
           docker version && docker info
       
       - name: Lint Dockerfile
+        env:
+          HADOLINT_IMAGE_VERSION: v1.17.6-3-g8da4f4e-alpine
         run: |
-          docker container run --rm -i hadolint/hadolint:v1.17.6-3-g8da4f4e-alpine < ./files/Dockerfile
+          docker container run --rm -i hadolint/hadolint:${HADOLINT_IMAGE_VERSION} < ./files/Dockerfile
           
       - name: Image Build
         env:

@@ -23,6 +23,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+
+      - name: Set Up
+        run: |
+          sudo apt install apt-transport-https gnupg
       
       - name: Print Docker version & info
         run: |
@@ -41,3 +45,19 @@ jobs:
           echo "=== ls ===" && docker image ls --no-trunc ${IMAGE_NAME}:${IMAGE_VERSION}
           echo "=== history ===" && docker image history --no-trunc ${IMAGE_NAME}:${IMAGE_VERSION}
           echo "=== inspect ===" && docker image inspect ${IMAGE_NAME}:${IMAGE_VERSION}
+
+      - name: Install trivy & Dockle
+        run: |
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -cs) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt update
+          sudo apt install --no-install-recommends trivy
+
+          sudo snap install hub --classic
+
+          TRIVY_VERSION=$(curl --silent "https://api.github.com/repos/jgm/pandoc/releases/latest" | \
+                    grep '"tag_name":' | \
+                    sed -E 's/.*"([^"]+)".*/\1/')
+          curl -L -o pandoc.deb https://github.com/jgm/pandoc/releases/download/${TRIVY_VERSION}/pandoc-${TRIVY_VERSION}-1-amd64.deb
+          sudo dpkg -i pandoc.deb
+          trivy --version

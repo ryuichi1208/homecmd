@@ -26,7 +26,7 @@ jobs:
       - name: Image Build
         env:
           DOCKER_BUILDKIT: 1
-          IMAGE_NAME: TEST
+          IMAGE_NAME: test
           IMAGE_VERSION: 1.0.0
         run: |
           docker image build -t ${IMAGE_NAME}:${IMAGE_VERSION}

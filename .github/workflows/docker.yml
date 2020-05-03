@@ -67,4 +67,4 @@ jobs:
       - name: Check Trivy & Dockle
         run: |
           trivy --version
-          dockler --version
+          dockle --version

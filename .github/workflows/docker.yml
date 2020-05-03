@@ -12,6 +12,11 @@ jobs:
     timeout-minutes: 300
 
     steps:
+      - env:
+          DOCKER_BUILDKIT: 1
+          IMAGE_NAME: TEST
+          IMAGE_VERSION: 1.0.0
+
       - name: Checkout
         uses: actions/checkout@v2
       
@@ -22,4 +27,7 @@ jobs:
       - name: Lint Dockerfile
         run: |
           docker container run --rm -i hadolint/hadolint:v1.17.6-3-g8da4f4e-alpine < ./files/Dockerfile
-      
+          
+      - name: Image Build
+        run: |
+          docker image build -t ${IMAGE_NAME}:${IMAGE_VERSION}

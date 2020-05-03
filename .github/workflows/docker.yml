@@ -46,6 +46,7 @@ jobs:
           echo "=== history ===" && docker image history --no-trunc ${IMAGE_NAME}:${IMAGE_VERSION}
           echo "=== inspect ===" && docker image inspect ${IMAGE_NAME}:${IMAGE_VERSION}
 
+      # Follow the installation instructions for Ubuntu.
       - name: Install Trivy & Dockle
         run: |
           TRIVY_VERSION=$(curl --silent "https://api.github.com/repos/jgm/pandoc/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
@@ -64,7 +65,14 @@ jobs:
           curl -L -o dockle.deb https://github.com/goodwithtech/dockle/releases/download/v${DOCKLE_VERSION}/dockle_${DOCKLE_VERSION}_Linux-64bit.deb
           sudo dpkg -i dockle.deb && rm dockle.deb
           
-      - name: Check Trivy & Dockle
+      # A Simple and Comprehensive Vulnerability Scanner for Containers, Suitable.
+      - name: Exec Trivy
         run: |
           trivy --version
+          trivy ${IMAGE_NAME}:${IMAGE_VERSION}
+
+      # Container Image Linter for Security, Helping build the Best-Practice Docker Image.
+      - name: Exec Dockle
+        run: |
           dockle --version
+          dockle ${IMAGE_NAME}:${IMAGE_VERSION}

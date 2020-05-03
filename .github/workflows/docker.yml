@@ -5,7 +5,16 @@ on:
     branches: 
       - master
       - release/**
-      
+
+env:
+  IMAGE_NAME: test
+  IMAGE_VERSION: 1.0.0
+
+  DOCKER_BUILDKIT: 1
+  DOCKER_FILE: ./files/Dockerfile
+
+  HADOLINT_IMAGE_VERSION: v1.17.6-3-g8da4f4e-alpine
+
 jobs:
   docker_file_lint:
     runs-on: ubuntu-18.04
@@ -20,18 +29,12 @@ jobs:
           docker version && docker info
       
       - name: Lint Dockerfile
-        env:
-          HADOLINT_IMAGE_VERSION: v1.17.6-3-g8da4f4e-alpine
         run: |
-          docker container run --rm -i hadolint/hadolint:${HADOLINT_IMAGE_VERSION} < ./files/Dockerfile
+          docker container run --rm -i hadolint/hadolint:${HADOLINT_IMAGE_VERSION} < ${DOCKER_FILE}
           
       - name: Image Build
-        env:
-          DOCKER_BUILDKIT: 1
-          IMAGE_NAME: test
-          IMAGE_VERSION: 1.0.0
         run: |
-          docker image build -f ./files/Dockerfile -t ${IMAGE_NAME}:${IMAGE_VERSION} .
+          docker image build -f ${DOCKER_FILE} -t ${IMAGE_NAME}:${IMAGE_VERSION} .
 
       - name: Image Check
         run: |

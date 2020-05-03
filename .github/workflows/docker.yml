@@ -32,4 +32,9 @@ jobs:
           IMAGE_VERSION: 1.0.0
         run: |
           docker image build -f ./files/Dockerfile -t ${IMAGE_NAME}:${IMAGE_VERSION} .
-          docker image ls --no-trunc ${IMAGE_NAME}:${IMAGE_VERSION}
+
+      - name: Image Check
+        run: |
+          echo "=== ls ===" && docker image ls --no-trunc ${IMAGE_NAME}:${IMAGE_VERSION}
+          echo "=== history ===" && docker image history --no-trunc ${IMAGE_NAME}:${IMAGE_VERSION}
+          echo "=== inspect ===" && docker image inspect ${IMAGE_NAME}:${IMAGE_VERSION}

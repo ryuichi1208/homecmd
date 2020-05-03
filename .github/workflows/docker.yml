@@ -15,6 +15,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       
+      - name: Print Docker version & info
+        run: |
+          docker version && docker info
+      
       - name: Lint Dockerfile
         run: |
           docker container run --rm -i hadolint/hadolint < ./files/Dockerfile

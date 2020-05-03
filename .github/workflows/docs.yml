@@ -54,8 +54,3 @@ jobs:
       - name: Lint Json
         run: |
           jsonlint ./docs/test.json
-          
-      - name: Check code spell
-        run: |
-          python -m codespell --version
-          python -m codespell ./docs

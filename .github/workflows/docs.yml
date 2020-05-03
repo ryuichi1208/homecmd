@@ -33,6 +33,7 @@ jobs:
         run: |
           sudo apt-get update
           pip install --user yamllint
+          pip install --user codespell
           npm install markdownlint markdownlint-cli --save-dev
           npm install -g markdown-link-check
           npm install jsonlint -g
@@ -53,3 +54,7 @@ jobs:
       - name: Lint Json
         run: |
           jsonlint ./docs/test.json
+          
+      - name: Check code spell
+        run: |
+          codespell ./docs

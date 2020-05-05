@@ -78,4 +78,14 @@ jobs:
         run: |
           pytest --cache-clear --verbose --full-trace src/
           if [[ $? -ne 0 ]]; then pytest --cache-clear --verbose --full-trace --setup-show src/; fi
-          pytest -v --cov=src/ --cov-report=html
+          pytest -v --cov=src/ --cov-report xml
+      
+      # https://github.com/codecov/codecov-action
+      - name: Upload Code Coverage
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          file: ./coverage.xml # optional
+          flags: unittests # optional
+          name: codecov-umbrella # optional
+          fail_ci_if_error: true # optional (default = false)

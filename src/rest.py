@@ -8,3 +8,13 @@ import time
 import urllib.request
 
 import babel
+
+import calc
+
+
+def main():
+    calc.add(10, 20)
+
+
+if __name__ == "__main__":
+    main()

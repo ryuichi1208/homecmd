@@ -65,4 +65,17 @@ jobs:
       - name: Exec black
         shell: bash
         run: |
-           black -v --check src/
+           black -v --check --diff src/
+
+      # https://gitlab.com/pycqa/flake8
+      - name: Exec flake8
+        run: |
+           flake8 --ignore=F401 src/
+
+      # https://github.com/pytest-dev/pytest
+      - name: Exec Pytest
+        shell: bash
+        run: |
+          pytest --cache-clear --verbose --full-trace src/
+          if [[ $? -ne 0 ]]; then pytest --cache-clear --verbose --full-trace --setup-show src/; fi
+          pytest -v --cov=src/ --cov-report=html

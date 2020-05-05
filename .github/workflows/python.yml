@@ -65,12 +65,14 @@ jobs:
       - name: Exec black
         shell: bash
         run: |
-           black -v --check --diff src/
+          black --version
+          black -v --check --diff src/
 
       # https://gitlab.com/pycqa/flake8
       - name: Exec flake8
         run: |
-           flake8 --ignore=F401 src/
+          flake8 --version
+          flake8 --ignore=F401 --exclude tests --max-line-length 100 src/
 
       # https://github.com/pytest-dev/pytest
       - name: Exec Pytest
@@ -83,9 +85,10 @@ jobs:
       # https://github.com/codecov/codecov-action
       - name: Upload Code Coverage
         uses: codecov/codecov-action@v1
+        if: github.event_name == 'push'
         with:
-          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
-          file: ./coverage.xml # optional
-          flags: unittests # optional
-          name: codecov-umbrella # optional
-          fail_ci_if_error: true # optional (default = false)
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: true

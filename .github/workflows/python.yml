@@ -52,3 +52,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r ./.github/workflows/requirements.txt
           pip list --verbose
+          
+      - name: Exec isort
+        run: |
+          python3 -m isort --check ./src/rest.py

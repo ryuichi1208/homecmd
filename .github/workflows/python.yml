@@ -59,7 +59,7 @@ jobs:
       - name: Exec isort
         shell: bash
         run: |
-          python -m isort --check --force-sort-within-sections ./src/rest.py
+          python -m isort --check --force-sort-within-sections --verbose ./src/rest.py
 
       # https://github.com/psf/black
       - name: Exec black

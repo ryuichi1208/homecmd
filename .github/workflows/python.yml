@@ -81,7 +81,7 @@ jobs:
         if: matrix.python-version == '3.8'
         run: |
           mypy --version
-          mypy --no-incremental src/
+          python3 -m mypy src/calc.py
 
   test:
     runs-on: ubuntu-latest

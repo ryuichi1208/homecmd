@@ -74,6 +74,14 @@ jobs:
         run: |
           flake8 --version
           flake8 --ignore=F401 --exclude tests --max-line-length 100 src/
+          
+      # https://github.com/python/mypy
+      - name: Exec mypy
+        shell: bash
+        if: matrix.python-version == '3.8'
+        run: |
+          mypy --version
+          mypy --no-incremental src/
 
   test:
     runs-on: ubuntu-latest

@@ -1,0 +1,27 @@
+#!/usr/local/bin/perl
+use strict;
+use warnings;
+use IO::Socket;
+
+my @children;
+
+my $listen = IO::Socket::INET->new(
+    LocalPort => 9999,
+    Listen    => SOMAXCONN,
+    Reuse     => 1,
+) or die $!;
+
+for (1..10) {
+    unless (fork) {
+        while (my $con = $listen->accept) {
+            while ($con->sysread(my $buffer, 1024)) {
+                $con->syswrite($buffer);
+            }
+            $con->close;
+        }
+        exit (0);
+    }
+}
+
+$listen->close;
+wait;

@@ -35,8 +35,9 @@ jobs:
           pip install yamllint
           pip install codespell
           npm install markdownlint markdownlint-cli --save-dev
-          npm install -g markdown-link-check
+          npm install markdown-link-check -g 
           npm install jsonlint -g
+          npm install textlint -g
 
       - name: Lint YAML
         run: |

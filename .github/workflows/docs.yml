@@ -11,6 +11,7 @@ on:
         required: false
       dir:
         required: false
+        default: "/home/test/"
 
 jobs:
   lint:

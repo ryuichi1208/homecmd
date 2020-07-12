@@ -5,6 +5,12 @@ on:
     branches:
       - master
       - develop
+  workflow_dispatch:
+    inputs:
+      name:
+        required: false
+      dir:
+        required: false
 
 jobs:
   lint:

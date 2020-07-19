@@ -1,0 +1,37 @@
+#!/bin/bash
+
+BS=$( printf '\010' )              # Back Space
+TAB=$(printf '\011' )              # Tab
+LFs=$(printf '\\\n_');LFs=${LFs%_} # Line Feed (for sed command)
+FF=$( printf '\014' )              # New Pafe (Form Feed)
+CR=$( printf '\015' )              # Carridge Return
+ACK=$(printf '\006' )              # Escape chr. for "\\"
+
+# === Get the options and the filepath ===============================
+# --- initialize option parameters -----------------------------------
+optn=0
+file=''
+#
+# --- get them -------------------------------------------------------
+case "$#" in [!0]*) case "$1" in '-n') optn=1;shift;; esac;; esac
+case $# in
+  0) :                   ;;
+  1) file=$1             ;;
+  *) print_usage_and_exit;;
+esac
+
+# === Validate the arguments =========================================
+if   [ "_$file" = '_'                ] ||
+     [ "_$file" = '_-'               ] ||
+     [ "_$file" = '_/dev/stdin'      ] ||
+     [ "_$file" = '_/dev/fd/0'       ] ||
+     [ "_$file" = '_/proc/self/fd/0' ]  ; then
+  file=''
+elif [ -f "$file"                    ] ||
+     [ -c "$file"                    ] ||
+     [ -p "$file"                    ]  ; then
+  [ -r "$file" ] || error_exit 1 'Cannot open the file: '"$file"
+else
+  print_usage_and_exit
+fi
+case "$file" in ''|-|/*|./*|../*) :;; *) file="./$file";; esac

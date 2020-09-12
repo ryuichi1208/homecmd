@@ -1,0 +1,14 @@
+#!/bin/bash
+cat /proc/meminfo | awk '
+BEGIN {
+    MemFree=0
+    Inactive=0
+    Shmem=0
+}
+$1 == "MemFree:" {MemFree=$2}
+$1 == "Active(file):" {Active=$2}
+$1 == "Inactive(file):" {Inactive=$2}
+END {
+    print (MemFree+Active+Inactive)*1024
+}
+'

@@ -1,0 +1,32 @@
+#!/bin/bash
+
+sigil_for() {
+  local file="$1"
+  local symlink_dirs_file_globs="$2"
+  local copy_always=0
+  local symlink_dirs=0
+
+  for copy_file in $COPY_ALWAYS; do
+    $DEBUG "copy_file: $copy_file"
+    $DEBUG "file: $file"
+
+    case "$file" in
+      $copy_file)
+        copy_always=1
+        break
+        ;;
+    esac
+  done
+
+  if [ -n "$symlink_dirs_file_globs" ]; then
+    symlink_dirs=1
+  fi
+
+  if [ $copy_always -eq 1 ]; then
+    echo 'X'
+  elif [ $symlink_dirs -eq 1 ]; then
+    echo '$'
+  else
+    echo '@'
+  fi
+}

@@ -52,7 +52,12 @@ jobs:
           echo "GITHUB_REF         : ${GITHUB_REF}"
           echo "GITHUB_HEAD_REF    : ${GITHUB_HEAD_REF}"
           echo "GITHUB_BASE_REF    : ${GITHUB_BASE_REF}"
-          
+      - name: Env Print
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: |
+          echo "$GITHUB_CONTEXT"
+
   command_version_check:
     runs-on: [ubuntu-18.04]
     name: command_version_check

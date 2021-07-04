@@ -1,3 +1,5 @@
+#!/usr/bin/perl
+
 warn "Loaded :)";
 
 package MyApache2::PrintEnv1;

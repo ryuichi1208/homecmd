@@ -3,7 +3,6 @@ name: ShellScript Lint
 on:
   push:
     branches:
-      - master
       - develop
 
 jobs:

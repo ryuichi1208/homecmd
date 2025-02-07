@@ -3,7 +3,6 @@ name: Docker ImageBuild And CI
 on:
   push:
     branches: 
-      - master
       - release/**
 
 env:

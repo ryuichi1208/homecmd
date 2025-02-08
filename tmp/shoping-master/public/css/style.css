@@ -1,0 +1,14 @@
+@charset "utf-8";
+
+.link {↲
+    text-align: center;
+}↲
+
+body{
+    color: #333;
+    font-size: 1.6rem;
+}
+
+a{
+  text-align: center;
+}

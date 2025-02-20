@@ -194,3 +194,12 @@ int main() {
     char *search_str = "World";
     char *result = search_string(str, search_str);
 }
+
+// CPUのソケット数を取得してその数だけスレッドを生成する
+int main() {
+    // CPUのソケット数を取得
+    int num_sockets = sysconf(_SC_NPROCESSORS_ONLN);
+
+    // スレッドの生成
+    pthread_t *threads = (pthread_t *)malloc(sizeof(pthread_t) * num_sockets);
+}

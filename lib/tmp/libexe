@@ -43,7 +43,15 @@ while [ $# -gt 0 ]; do
             arg="${OPTARG}"
             [ -z "$arg" ] && arg="$PIPED_INPUT";
             if [ -f "$arg" ]; then
-                source "$arg"
+                case "$(uname -s)" in
+                    Darwin* | Linux* )
+                        source "$arg"
+                        ;;
+                    * )
+                        echo "Unsupported OS" >&2
+                        exit 1
+                        ;;
+                esac
             else
                 eval "$arg"
             fi

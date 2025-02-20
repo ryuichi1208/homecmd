@@ -30,4 +30,63 @@ sub info {
     print @msg, "\n";
 }
 
+sub get_dynamic_links {
+    my ($class, $path) = @_;
+
+    my @links;
+    # readlinkを使用してシンボリックリンクの情報を取得
+    if (-l $path) {
+        my $target = readlink($path);
+        push @links, {
+            source => $path,
+            target => $target,
+            is_broken => !-e $target
+        };
+    }
+
+    # ディレクトリの場合は再帰的に検索
+    if (-d $path) {
+        opendir(my $dh, $path) or die "Cannot open directory: $!";
+        while (my $entry = readdir($dh)) {
+            next if $entry eq '.' || $entry eq '..';
+            push @links, $class->get_dynamic_links("$path/$entry");
+        }
+        closedir($dh);
+    }
+
+    return @links;
+}
+
+# シンボリックリンクの情報を取得
+my @links = get_dynamic_links("/usr/local/bin");
+
+# 結果を表示
+foreach my $link (@links) {
+    print "Source: $link->{source}\n";
+    print "Target: $link->{target}\n";
+    print "Is Broken: $link->{is_broken}\n";
+}
+
+# procfsのmeminfoを取得
+sub get_meminfo {
+    my ($class) = @_;
+    my $meminfo = `cat /proc/meminfo`;
+    return $meminfo;
+}
+
+# TCPの情報をProcfsから取得してそのうちのdropの値を1秒ごとに表示する
+sub get_tcp_info {
+    my ($class) = @_;
+    my $tcp_info = `cat /proc/net/tcp`;
+    return $tcp_info;
+}
+
+# メモリ使用量を取得
+sub get_memory_usage {
+    my ($class) = @_;
+    my $meminfo = get_meminfo();
+    my $memory_usage = `free -m`;
+    return $memory_usage;
+}
+
 1;

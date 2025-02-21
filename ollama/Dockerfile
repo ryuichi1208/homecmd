@@ -20,10 +20,14 @@ RUN apt-get update && \
 # RUN pip3 install requests
 
 # gemを使用してRubyパッケージをインストールする場合（例：bundler）
-# RUN gem install bundler
+RUN gem install bundler
 
 # 必要に応じて、作業ディレクトリを設定します。
-# WORKDIR /app
+WORKDIR /app
 
 # 必要に応じて、デフォルトのコマンドを設定します。
-# CMD ["bash"]
+CMD ["bash"]
+RUN bundle install
+RUN bundle exec rails db:create
+RUN bundle exec rails db:migrate
+RUN bundle exec rails s -b 0.0.0.0

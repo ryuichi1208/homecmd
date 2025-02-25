@@ -57,16 +57,6 @@ sub get_dynamic_links {
     return @links;
 }
 
-# シンボリックリンクの情報を取得
-my @links = get_dynamic_links("/usr/local/bin");
-
-# 結果を表示
-foreach my $link (@links) {
-    print "Source: $link->{source}\n";
-    print "Target: $link->{target}\n";
-    print "Is Broken: $link->{is_broken}\n";
-}
-
 # procfsのmeminfoを取得
 sub get_meminfo {
     my ($class) = @_;
@@ -84,7 +74,7 @@ sub get_tcp_info {
 # メモリ使用量を取得
 sub get_memory_usage {
     my ($class) = @_;
-    my $meminfo = get_meminfo();
+    my $meminfo = $class->get_meminfo();  # クラスメソッド呼び出しに修正
     my $memory_usage = `free -m`;
     return $memory_usage;
 }

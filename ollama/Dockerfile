@@ -26,8 +26,8 @@ RUN gem install bundler
 WORKDIR /app
 
 # 必要に応じて、デフォルトのコマンドを設定します。
-CMD ["bash"]
+CMD ["bundle", "exec", "rails", "s", "-b", "0.0.0.0"]
 RUN bundle install
 RUN bundle exec rails db:create
-RUN bundle exec rails db:migrate
-RUN bundle exec rails s -b 0.0.0.0
+RUN bundle exec rails db:migrate & wait
+RUN bundle exec rails db:seed

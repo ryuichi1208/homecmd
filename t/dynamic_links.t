@@ -66,4 +66,17 @@ subtest 'ディレクトリ再帰のテスト' => sub {
     ok(!$link_map{$sub_link}->{is_broken}, 'サブディレクトリ内のリンクは正常');
 };
 
+subtest '平方根計算のテスト' => sub {
+    # 平方根を計算する関数を定義
+    sub calculate_square_root {
+        my ($a, $b) = @_;
+        return sqrt($a * $b);
+    }
+
+    # テストケース
+    is(calculate_square_root(4, 9), 6, '4と9の平方根は6');
+    is(calculate_square_root(16, 25), 20, '16と25の平方根は20');
+    is(sprintf("%.2f", calculate_square_root(2, 3)), '2.45', '2と3の平方根は約2.45');
+};
+
 done_testing;

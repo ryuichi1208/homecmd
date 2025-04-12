@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 import asyncio
 import subprocess
-from mcp.server.fastmcp import FastMCP
+from mcp import FastMCP
 
 # Initialize FastMCP server
 mcp = FastMCP("ssh")

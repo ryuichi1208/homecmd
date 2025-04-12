@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 import asyncio
 import subprocess
-from mcp import FastMCP
+from mcp.server.fastmcp import FastMCP
 
 # Initialize FastMCP server
 mcp = FastMCP("ssh")
@@ -136,6 +136,11 @@ async def ssh_list_hosts() -> str:
     return "\n".join(hosts)
 
 
+async def main():
+    """SSH MCPサーバーのメインエントリーポイント"""
+    mcp.run(transport="stdio")
+
+
 if __name__ == "__main__":
     # Initialize and run the server
-    mcp.run(transport="stdio")
+    asyncio.run(main())

@@ -70,7 +70,7 @@ void advance(Lexer *lexer)
     {
         lexer->column++;
     }
-    
+
     lexer->pos++;
     lexer->current_char = get_current_char(lexer);
 }
@@ -106,22 +106,22 @@ Token *parse_identifier(Lexer *lexer)
     int start = lexer->pos;
     int line = lexer->line;
     int column = lexer->column;
-    
+
     while (lexer->current_char != '\0' && (isalnum(lexer->current_char) || lexer->current_char == '_'))
     {
         advance(lexer);
     }
-    
+
     int length = lexer->pos - start;
     char *value = (char *)malloc(length + 1);
     strncpy(value, lexer->source + start, length);
     value[length] = '\0';
-    
+
     Token *token = (Token *)malloc(sizeof(Token));
     token->value = value;
     token->line = line;
     token->column = column;
-    
+
     if (strcmp(value, "include") == 0)
     {
         token->type = TOKEN_INCLUDE;
@@ -142,7 +142,7 @@ Token *parse_identifier(Lexer *lexer)
     {
         token->type = TOKEN_IDENTIFIER;
     }
-    
+
     return token;
 }
 
@@ -152,23 +152,23 @@ Token *parse_number(Lexer *lexer)
     int start = lexer->pos;
     int line = lexer->line;
     int column = lexer->column;
-    
+
     while (lexer->current_char != '\0' && isdigit(lexer->current_char))
     {
         advance(lexer);
     }
-    
+
     int length = lexer->pos - start;
     char *value = (char *)malloc(length + 1);
     strncpy(value, lexer->source + start, length);
     value[length] = '\0';
-    
+
     Token *token = (Token *)malloc(sizeof(Token));
     token->type = TOKEN_NUMBER;
     token->value = value;
     token->line = line;
     token->column = column;
-    
+
     return token;
 }
 
@@ -177,46 +177,122 @@ Token *parse_string(Lexer *lexer)
 {
     int line = lexer->line;
     int column = lexer->column;
-    
+
     advance(lexer); // 開始の " をスキップ
-    
+
     int start = lexer->pos;
     while (lexer->current_char != '\0' && lexer->current_char != '"')
     {
         advance(lexer);
     }
-    
+
     int length = lexer->pos - start;
     char *value = (char *)malloc(length + 1);
     strncpy(value, lexer->source + start, length);
     value[length] = '\0';
-    
+
     if (lexer->current_char == '"')
     {
         advance(lexer); // 終了の " をスキップ
     }
-    
+
     Token *token = (Token *)malloc(sizeof(Token));
     token->type = TOKEN_STRING;
     token->value = value;
     token->line = line;
     token->column = column;
-    
+
     return token;
 }
 
 // プリプロセッサディレクティブを解析
-void parse_preprocessor(Lexer *lexer)
+Token *parse_preprocessor(Lexer *lexer)
 {
-    // # から始まる行全体をスキップする
+    int line = lexer->line;
+    int column = lexer->column;
+
+    // # を処理
+    Token *token = (Token *)malloc(sizeof(Token));
+    token->type = TOKEN_HASH;
+    token->value = strdup("#");
+    token->line = line;
+    token->column = column;
+
+    advance(lexer);
+    skip_whitespace(lexer);
+
+    // include など、プリプロセッサの種類を取得
+    if (lexer->current_char != '\0' && isalpha(lexer->current_char))
+    {
+        int start = lexer->pos;
+        while (lexer->current_char != '\0' && isalnum(lexer->current_char))
+        {
+            advance(lexer);
+        }
+
+        int length = lexer->pos - start;
+        char *directive = (char *)malloc(length + 1);
+        strncpy(directive, lexer->source + start, length);
+        directive[length] = '\0';
+
+        // プリプロセッサディレクティブに応じた処理
+        if (strcmp(directive, "include") == 0)
+        {
+            free(token->value);
+            token->type = TOKEN_INCLUDE;
+            token->value = malloc(strlen("#include") + 1);
+            strcpy(token->value, "#include");
+
+            // 空白をスキップ
+            skip_whitespace(lexer);
+
+            // <stdio.h> や "header.h" を処理
+            if (lexer->current_char == '<' || lexer->current_char == '"')
+            {
+                char opener = lexer->current_char;
+                char closer = (opener == '<') ? '>' : '"';
+
+                advance(lexer); // < または " をスキップ
+
+                int header_start = lexer->pos;
+                while (lexer->current_char != '\0' && lexer->current_char != closer && lexer->current_char != '\n')
+                {
+                    advance(lexer);
+                }
+
+                int header_length = lexer->pos - header_start;
+                if (header_length > 0)
+                {
+                    // ヘッダー名を token->value に追加する
+                    char *header_name = (char *)malloc(header_length + 1);
+                    strncpy(header_name, lexer->source + header_start, header_length);
+                    header_name[header_length] = '\0';
+
+                    char *new_value = (char *)malloc(strlen(token->value) + header_length + 4);
+                    sprintf(new_value, "%s %c%s%c", token->value, opener, header_name, closer);
+
+                    free(token->value);
+                    token->value = new_value;
+                    free(header_name);
+                }
+
+                if (lexer->current_char == closer)
+                {
+                    advance(lexer); // > または " をスキップ
+                }
+            }
+        }
+
+        free(directive);
+    }
+
+    // 行末までスキップ
     while (lexer->current_char != '\0' && lexer->current_char != '\n')
     {
         advance(lexer);
     }
-    if (lexer->current_char == '\n')
-    {
-        advance(lexer);
-    }
+
+    return token;
 }
 
 // 次のトークンを取得
@@ -229,78 +305,43 @@ Token *get_next_token(Lexer *lexer)
             skip_whitespace(lexer);
             continue;
         }
-        
+
         if (lexer->current_char == '/' && lexer->pos + 1 < lexer->length && lexer->source[lexer->pos + 1] == '/')
         {
             skip_comment(lexer);
             continue;
         }
-        
+
         int line = lexer->line;
         int column = lexer->column;
-        
+
         if (lexer->current_char == '#')
         {
-            Token *token = (Token *)malloc(sizeof(Token));
-            token->type = TOKEN_HASH;
-            token->value = strdup("#");
-            token->line = line;
-            token->column = column;
-            
-            advance(lexer);
-            
-            // プリプロセッサディレクティブの解析
-            skip_whitespace(lexer);
-            
-            if (lexer->current_char != '\0' && isalpha(lexer->current_char))
-            {
-                int start = lexer->pos;
-                while (lexer->current_char != '\0' && isalnum(lexer->current_char))
-                {
-                    advance(lexer);
-                }
-                
-                int length = lexer->pos - start;
-                char *directive = (char *)malloc(length + 1);
-                strncpy(directive, lexer->source + start, length);
-                directive[length] = '\0';
-                
-                // プリプロセッサディレクティブに応じた処理
-                if (strcmp(directive, "include") == 0)
-                {
-                    free(token->value);
-                    token->value = malloc(strlen("#include") + 1);
-                    strcpy(token->value, "#include");
-                }
-                
-                free(directive);
-            }
-            
-            return token;
+            return parse_preprocessor(lexer);
         }
-        
+
         if (isalpha(lexer->current_char) || lexer->current_char == '_')
         {
             return parse_identifier(lexer);
         }
-        
+
         if (isdigit(lexer->current_char))
         {
             return parse_number(lexer);
         }
-        
+
         if (lexer->current_char == '"')
         {
             return parse_string(lexer);
         }
-        
+
         Token *token = (Token *)malloc(sizeof(Token));
         token->value = (char *)malloc(2);
         token->value[0] = lexer->current_char;
         token->value[1] = '\0';
         token->line = line;
         token->column = column;
-        
+
         switch (lexer->current_char)
         {
         case '(':
@@ -331,11 +372,11 @@ Token *get_next_token(Lexer *lexer)
             token->type = TOKEN_UNKNOWN;
             break;
         }
-        
+
         advance(lexer);
         return token;
     }
-    
+
     Token *token = (Token *)malloc(sizeof(Token));
     token->type = TOKEN_EOF;
     token->value = NULL;
@@ -366,18 +407,18 @@ char *read_file(const char *filename)
         printf("ファイルを開けませんでした: %s\n", filename);
         return NULL;
     }
-    
+
     fseek(file, 0, SEEK_END);
     long length = ftell(file);
     fseek(file, 0, SEEK_SET);
-    
+
     char *buffer = (char *)malloc(length + 1);
     if (buffer)
     {
         fread(buffer, 1, length, file);
         buffer[length] = '\0';
     }
-    
+
     fclose(file);
     return buffer;
 }
@@ -454,20 +495,20 @@ void emit(Parser *parser, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    
+
     char buffer[256];
     vsnprintf(buffer, sizeof(buffer), format, args);
-    
+
     int len = strlen(buffer);
     if (parser->code_size + len + 1 > parser->code_capacity)
     {
         parser->code_capacity *= 2;
         parser->assembly_code = (char *)realloc(parser->assembly_code, parser->code_capacity);
     }
-    
+
     strcat(parser->assembly_code, buffer);
     parser->code_size += len;
-    
+
     va_end(args);
 }
 
@@ -478,30 +519,30 @@ int main(int argc, char **argv)
         printf("使用法: %s <ソースファイル>\n", argv[0]);
         return 1;
     }
-    
+
     char *source = read_file(argv[1]);
     if (!source)
     {
         return 1;
     }
-    
+
     Lexer *lexer = init_lexer(source);
-    
+
     printf("ファイル '%s' のトークン解析結果:\n", argv[1]);
     printf("-------------------------------------\n");
     printf("%-15s %-20s %-5s %-5s\n", "タイプ", "値", "行", "列");
     printf("-------------------------------------\n");
-    
+
     Token *token;
     do
     {
         token = get_next_token(lexer);
-        printf("%-15s %-20s %-5d %-5d\n", 
-               token_type_to_string(token->type), 
+        printf("%-15s %-20s %-5d %-5d\n",
+               token_type_to_string(token->type),
                token->value ? token->value : "null",
                token->line,
                token->column);
-        
+
         // トークンの解放
         if (token->value)
         {
@@ -509,7 +550,7 @@ int main(int argc, char **argv)
         }
         free(token);
     } while (token->type != TOKEN_EOF);
-    
+
     // コンパイルフェーズは今後実装予定
     printf("\n簡易的なコンパイラです。現在はトークン解析のみ実装しています。\n");
     printf("今後の実装予定：\n");

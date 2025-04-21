@@ -139,3 +139,6 @@ cython_debug/s
 
 .vscode
 .vscode_bk
+
+jit/simple_compiler
+jit/hello

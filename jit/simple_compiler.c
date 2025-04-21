@@ -46,6 +46,9 @@ typedef struct
     char current_char;
     int line;
     int column;
+    Token **tokens;     // 全トークンを保持する配列
+    int token_count;    // トークンの数
+    int token_capacity; // トークン配列の容量
 } Lexer;
 
 // 現在の文字を取得
@@ -98,6 +101,18 @@ void skip_comment(Lexer *lexer)
             advance(lexer);
         }
     }
+}
+
+// トークンを追加
+void add_token(Lexer *lexer, Token *token)
+{
+    if (lexer->token_count >= lexer->token_capacity)
+    {
+        lexer->token_capacity *= 2;
+        lexer->tokens = (Token **)realloc(lexer->tokens, lexer->token_capacity * sizeof(Token *));
+    }
+
+    lexer->tokens[lexer->token_count++] = token;
 }
 
 // 識別子を解析
@@ -385,6 +400,17 @@ Token *get_next_token(Lexer *lexer)
     return token;
 }
 
+// 全てのトークンを取得する
+void tokenize(Lexer *lexer)
+{
+    Token *token;
+    do
+    {
+        token = get_next_token(lexer);
+        add_token(lexer, token);
+    } while (token->type != TOKEN_EOF);
+}
+
 // レキサーの初期化
 Lexer *init_lexer(char *source)
 {
@@ -395,7 +421,30 @@ Lexer *init_lexer(char *source)
     lexer->current_char = get_current_char(lexer);
     lexer->line = 1;
     lexer->column = 0;
+
+    // トークン配列の初期化
+    lexer->token_capacity = 16;
+    lexer->token_count = 0;
+    lexer->tokens = (Token **)malloc(lexer->token_capacity * sizeof(Token *));
+
     return lexer;
+}
+
+// レキサーの解放
+void free_lexer(Lexer *lexer)
+{
+    // トークンの解放
+    for (int i = 0; i < lexer->token_count; i++)
+    {
+        if (lexer->tokens[i]->value)
+        {
+            free(lexer->tokens[i]->value);
+        }
+        free(lexer->tokens[i]);
+    }
+
+    free(lexer->tokens);
+    free(lexer);
 }
 
 // ファイルを読み込む
@@ -512,6 +561,70 @@ void emit(Parser *parser, const char *format, ...)
     va_end(args);
 }
 
+// AST（抽象構文木）のノードタイプ
+typedef enum
+{
+    AST_PROGRAM,
+    AST_FUNCTION_DECLARATION,
+    AST_STATEMENT,
+    AST_RETURN_STATEMENT,
+    AST_EXPRESSION,
+    AST_CALL_EXPRESSION,
+    AST_STRING_LITERAL,
+    AST_NUMBER_LITERAL
+} ASTNodeType;
+
+// AST（抽象構文木）ノード
+typedef struct ASTNode
+{
+    ASTNodeType type;
+    char *value;
+    struct ASTNode **children;
+    int child_count;
+    int child_capacity;
+} ASTNode;
+
+// ASTノードを作成
+ASTNode *create_ast_node(ASTNodeType type)
+{
+    ASTNode *node = (ASTNode *)malloc(sizeof(ASTNode));
+    node->type = type;
+    node->value = NULL;
+    node->child_capacity = 4;
+    node->child_count = 0;
+    node->children = (ASTNode **)malloc(node->child_capacity * sizeof(ASTNode *));
+    return node;
+}
+
+// ASTノードに子ノードを追加
+void add_child(ASTNode *parent, ASTNode *child)
+{
+    if (parent->child_count >= parent->child_capacity)
+    {
+        parent->child_capacity *= 2;
+        parent->children = (ASTNode **)realloc(parent->children, parent->child_capacity * sizeof(ASTNode *));
+    }
+
+    parent->children[parent->child_count++] = child;
+}
+
+// ASTノードを解放
+void free_ast_node(ASTNode *node)
+{
+    if (node->value)
+    {
+        free(node->value);
+    }
+
+    for (int i = 0; i < node->child_count; i++)
+    {
+        free_ast_node(node->children[i]);
+    }
+
+    free(node->children);
+    free(node);
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2)
@@ -527,29 +640,22 @@ int main(int argc, char **argv)
     }
 
     Lexer *lexer = init_lexer(source);
+    tokenize(lexer);
 
     printf("ファイル '%s' のトークン解析結果:\n", argv[1]);
     printf("-------------------------------------\n");
     printf("%-15s %-20s %-5s %-5s\n", "タイプ", "値", "行", "列");
     printf("-------------------------------------\n");
 
-    Token *token;
-    do
+    for (int i = 0; i < lexer->token_count; i++)
     {
-        token = get_next_token(lexer);
+        Token *token = lexer->tokens[i];
         printf("%-15s %-20s %-5d %-5d\n",
                token_type_to_string(token->type),
                token->value ? token->value : "null",
                token->line,
                token->column);
-
-        // トークンの解放
-        if (token->value)
-        {
-            free(token->value);
-        }
-        free(token);
-    } while (token->type != TOKEN_EOF);
+    }
 
     // コンパイルフェーズは今後実装予定
     printf("\n簡易的なコンパイラです。現在はトークン解析のみ実装しています。\n");
@@ -559,7 +665,7 @@ int main(int argc, char **argv)
     printf("3. 最適化\n");
 
     free(source);
-    free(lexer);
+    free_lexer(lexer);
 
     return 0;
 }

@@ -103,18 +103,6 @@ void skip_comment(Lexer *lexer)
     }
 }
 
-// トークンを追加
-void add_token(Lexer *lexer, Token *token)
-{
-    if (lexer->token_count >= lexer->token_capacity)
-    {
-        lexer->token_capacity *= 2;
-        lexer->tokens = (Token **)realloc(lexer->tokens, lexer->token_capacity * sizeof(Token *));
-    }
-
-    lexer->tokens[lexer->token_count++] = token;
-}
-
 // 識別子を解析
 Token *parse_identifier(Lexer *lexer)
 {
@@ -400,6 +388,18 @@ Token *get_next_token(Lexer *lexer)
     return token;
 }
 
+// トークンを追加
+void add_token(Lexer *lexer, Token *token)
+{
+    if (lexer->token_count >= lexer->token_capacity)
+    {
+        lexer->token_capacity *= 2;
+        lexer->tokens = (Token **)realloc(lexer->tokens, lexer->token_capacity * sizeof(Token *));
+    }
+
+    lexer->tokens[lexer->token_count++] = token;
+}
+
 // 全てのトークンを取得する
 void tokenize(Lexer *lexer)
 {
@@ -520,18 +520,24 @@ const char *token_type_to_string(TokenType type)
     }
 }
 
-// パーサーの結果構造体
+// パーサー構造体
 typedef struct
 {
-    char *assembly_code;
-    int code_size;
-    int code_capacity;
+    Token **tokens;      // トークン配列
+    int token_count;     // トークン数
+    int current_token;   // 現在処理中のトークンのインデックス
+    char *assembly_code; // 生成されたアセンブリコード
+    int code_size;       // コードサイズ
+    int code_capacity;   // コード容量
 } Parser;
 
-// パーサーを初期化
-Parser *init_parser()
+// パーサーの初期化
+Parser *init_parser(Token **tokens, int token_count)
 {
     Parser *parser = (Parser *)malloc(sizeof(Parser));
+    parser->tokens = tokens;
+    parser->token_count = token_count;
+    parser->current_token = 0;
     parser->code_capacity = 1024;
     parser->assembly_code = (char *)malloc(parser->code_capacity);
     parser->code_size = 0;
@@ -539,8 +545,63 @@ Parser *init_parser()
     return parser;
 }
 
+// パーサーの解放
+void free_parser(Parser *parser)
+{
+    free(parser->assembly_code);
+    free(parser);
+}
+
+// エラー処理
+void parser_error(Parser *parser, const char *message)
+{
+    Token *token = parser->tokens[parser->current_token];
+    printf("エラー: %s (行: %d, 列: %d)\n", message, token->line, token->column);
+    exit(1);
+}
+
+// 現在のトークンを取得
+Token *get_current_token(Parser *parser)
+{
+    if (parser->current_token >= parser->token_count)
+    {
+        return NULL;
+    }
+    return parser->tokens[parser->current_token];
+}
+
+// 次のトークンに進む
+void parser_advance(Parser *parser)
+{
+    if (parser->current_token < parser->token_count)
+    {
+        parser->current_token++;
+    }
+}
+
+// トークンタイプをチェック
+int check_token_type(Parser *parser, TokenType type)
+{
+    Token *token = get_current_token(parser);
+    if (!token)
+    {
+        return 0;
+    }
+    return token->type == type;
+}
+
+// トークンタイプが一致することを期待して消費する
+void expect_token(Parser *parser, TokenType type, const char *error_message)
+{
+    if (!check_token_type(parser, type))
+    {
+        parser_error(parser, error_message);
+    }
+    parser_advance(parser);
+}
+
 // アセンブリコードを追加
-void emit(Parser *parser, const char *format, ...)
+void parser_emit(Parser *parser, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -561,68 +622,229 @@ void emit(Parser *parser, const char *format, ...)
     va_end(args);
 }
 
-// AST（抽象構文木）のノードタイプ
-typedef enum
+// アセンブリファイルに出力
+void output_assembly(Parser *parser, const char *filename)
 {
-    AST_PROGRAM,
-    AST_FUNCTION_DECLARATION,
-    AST_STATEMENT,
-    AST_RETURN_STATEMENT,
-    AST_EXPRESSION,
-    AST_CALL_EXPRESSION,
-    AST_STRING_LITERAL,
-    AST_NUMBER_LITERAL
-} ASTNodeType;
+    char asm_filename[256];
+    snprintf(asm_filename, sizeof(asm_filename), "%s.asm", filename);
 
-// AST（抽象構文木）ノード
-typedef struct ASTNode
-{
-    ASTNodeType type;
-    char *value;
-    struct ASTNode **children;
-    int child_count;
-    int child_capacity;
-} ASTNode;
+    FILE *file = fopen(asm_filename, "w");
+    if (!file)
+    {
+        printf("アセンブリファイルを作成できませんでした: %s\n", asm_filename);
+        return;
+    }
 
-// ASTノードを作成
-ASTNode *create_ast_node(ASTNodeType type)
-{
-    ASTNode *node = (ASTNode *)malloc(sizeof(ASTNode));
-    node->type = type;
-    node->value = NULL;
-    node->child_capacity = 4;
-    node->child_count = 0;
-    node->children = (ASTNode **)malloc(node->child_capacity * sizeof(ASTNode *));
-    return node;
+    fprintf(file, "%s", parser->assembly_code);
+    fclose(file);
+
+    printf("アセンブリコードを生成しました: %s\n", asm_filename);
 }
 
-// ASTノードに子ノードを追加
-void add_child(ASTNode *parent, ASTNode *child)
+// アセンブリコードをコンパイル（macOS ARM64用）
+void compile_assembly(const char *filename)
 {
-    if (parent->child_count >= parent->child_capacity)
+    char asm_filename[256];
+    char obj_filename[256];
+    char exe_filename[256];
+    char as_cmd[512];
+    char ld_cmd[512];
+
+    snprintf(asm_filename, sizeof(asm_filename), "%s.asm", filename);
+    snprintf(obj_filename, sizeof(obj_filename), "%s.o", filename);
+    snprintf(exe_filename, sizeof(exe_filename), "%s_asm_exe", filename);
+
+    // macOS ARM64用のアセンブルとリンクコマンド
+    snprintf(as_cmd, sizeof(as_cmd), "as -arch arm64 -o %s %s", obj_filename, asm_filename);
+    snprintf(ld_cmd, sizeof(ld_cmd), "ld -o %s %s -lSystem -L/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -platform_version macos 13.0.0 13.0.0 -arch arm64", exe_filename, obj_filename);
+
+    printf("アセンブリコードをコンパイル中...\n");
+    printf("コマンド: %s\n", as_cmd);
+
+    int result = system(as_cmd);
+    if (result != 0)
     {
-        parent->child_capacity *= 2;
-        parent->children = (ASTNode **)realloc(parent->children, parent->child_capacity * sizeof(ASTNode *));
+        printf("アセンブルに失敗しました。\n");
+        return;
     }
 
-    parent->children[parent->child_count++] = child;
+    printf("コマンド: %s\n", ld_cmd);
+    result = system(ld_cmd);
+    if (result != 0)
+    {
+        printf("リンクに失敗しました。\n");
+        return;
+    }
+
+    printf("アセンブリコードのコンパイル完了: %s\n", exe_filename);
+    printf("実行するには: ./%s\n", exe_filename);
 }
 
-// ASTノードを解放
-void free_ast_node(ASTNode *node)
+// 関数の前方宣言
+void parse_function_body_arm64(Parser *parser);
+void parse_statement_arm64(Parser *parser);
+void parse_return_statement_arm64(Parser *parser);
+void parse_program(Parser *parser);
+
+// プログラム全体の解析
+void parse_program(Parser *parser)
 {
-    if (node->value)
+    // アセンブリのヘッダー（macOS ARM64用）
+    parser_emit(parser, ".section __TEXT,__text\n");
+    parser_emit(parser, ".global _main\n\n");
+
+    // include文をスキップ
+    while (parser->current_token < parser->token_count &&
+           check_token_type(parser, TOKEN_INCLUDE))
     {
-        free(node->value);
+        parser_advance(parser);
     }
 
-    for (int i = 0; i < node->child_count; i++)
+    // 関数宣言を解析
+    if (parser->current_token < parser->token_count)
     {
-        free_ast_node(node->children[i]);
+        // INT キーワードをチェック
+        if (check_token_type(parser, TOKEN_INT))
+        {
+            parser_advance(parser);
+        }
+        else
+        {
+            parser_error(parser, "関数の戻り値の型が必要です");
+        }
+
+        // 関数名をチェック
+        if (check_token_type(parser, TOKEN_IDENTIFIER))
+        {
+            char *function_name = get_current_token(parser)->value;
+            if (strcmp(function_name, "main") == 0)
+            {
+                parser_emit(parser, "_main:\n");
+            }
+            else
+            {
+                parser_emit(parser, "_%s:\n", function_name);
+            }
+            parser_advance(parser);
+        }
+        else
+        {
+            parser_error(parser, "関数名が必要です");
+        }
+
+        // 引数リスト
+        expect_token(parser, TOKEN_LPAREN, "関数名の後に '(' が必要です");
+        expect_token(parser, TOKEN_RPAREN, "引数リストの後に ')' が必要です");
+
+        // 関数本体
+        parse_function_body_arm64(parser);
     }
 
-    free(node->children);
-    free(node);
+    // データセクション（文字列リテラル用）
+    parser_emit(parser, "\n.section __TEXT,__cstring,cstring_literals\n");
+
+    // 文字列リテラルを追加
+    for (int i = 0; i < parser->token_count; i++)
+    {
+        if (parser->tokens[i]->type == TOKEN_STRING)
+        {
+            // 文字列リテラルをデータセクションに追加
+            parser_emit(parser, "L_.str%d:\n", i);
+            parser_emit(parser, "    .asciz \"%s\"\n", parser->tokens[i]->value);
+        }
+    }
+}
+
+// 関数本体の解析（macOS ARM64用）
+void parse_function_body_arm64(Parser *parser)
+{
+    expect_token(parser, TOKEN_LBRACE, "関数の始まりに '{' が必要です");
+
+    // 関数プロローグ
+    parser_emit(parser, "    stp x29, x30, [sp, #-16]!\n"); // フレームポインタとリンクレジスタを保存
+    parser_emit(parser, "    mov x29, sp\n");               // フレームポインタを設定
+
+    // 関数の本体
+    while (!check_token_type(parser, TOKEN_RBRACE) && !check_token_type(parser, TOKEN_EOF))
+    {
+        parse_statement_arm64(parser);
+    }
+
+    // 関数エピローグ（明示的なreturnがない場合）
+    if (!check_token_type(parser, TOKEN_EOF))
+    {
+        parser_emit(parser, "    mov w0, #0\n"); // デフォルトで0を返す
+        parser_emit(parser, "    ldp x29, x30, [sp], #16\n");
+        parser_emit(parser, "    ret\n");
+    }
+
+    expect_token(parser, TOKEN_RBRACE, "関数の終わりに '}' が必要です");
+}
+
+// 文の解析（macOS ARM64用）
+void parse_statement_arm64(Parser *parser)
+{
+    if (check_token_type(parser, TOKEN_RETURN))
+    {
+        parse_return_statement_arm64(parser);
+    }
+    else if (check_token_type(parser, TOKEN_PRINTF))
+    {
+        // printf関数呼び出し
+        parser_advance(parser);
+        expect_token(parser, TOKEN_LPAREN, "printf の後に '(' が必要です");
+
+        if (check_token_type(parser, TOKEN_STRING))
+        {
+            int str_index = parser->current_token;
+            parser_emit(parser, "    adrp x0, L_.str%d@PAGE\n", str_index);
+            parser_emit(parser, "    add x0, x0, L_.str%d@PAGEOFF\n", str_index);
+            parser_emit(parser, "    bl _printf\n");
+            parser_advance(parser);
+        }
+        else
+        {
+            parser_error(parser, "printf には文字列が必要です");
+        }
+
+        expect_token(parser, TOKEN_RPAREN, "printf の引数リストの後に ')' が必要です");
+        expect_token(parser, TOKEN_SEMICOLON, "printf 文の後にセミコロンが必要です");
+    }
+    else
+    {
+        parser_error(parser, "不明な文です");
+    }
+}
+
+// return文の解析（macOS ARM64用）
+void parse_return_statement_arm64(Parser *parser)
+{
+    expect_token(parser, TOKEN_RETURN, "return キーワードが必要です");
+
+    // return の後に式が続く場合
+    if (!check_token_type(parser, TOKEN_SEMICOLON))
+    {
+        if (check_token_type(parser, TOKEN_NUMBER))
+        {
+            char *value = get_current_token(parser)->value;
+            parser_emit(parser, "    mov w0, #%s\n", value);
+            parser_advance(parser);
+        }
+        else
+        {
+            parser_error(parser, "サポートされていない式です");
+        }
+    }
+    else
+    {
+        // デフォルトで0を返す
+        parser_emit(parser, "    mov w0, #0\n");
+    }
+
+    parser_emit(parser, "    ldp x29, x30, [sp], #16\n"); // フレームポインタとリンクレジスタを復元
+    parser_emit(parser, "    ret\n");                     // 関数から戻る
+
+    expect_token(parser, TOKEN_SEMICOLON, "return 文の後にセミコロンが必要です");
 }
 
 int main(int argc, char **argv)
@@ -637,6 +859,15 @@ int main(int argc, char **argv)
     if (!source)
     {
         return 1;
+    }
+
+    // 入力ファイル名から拡張子を除いたベース名を取得
+    char base_filename[256];
+    strcpy(base_filename, argv[1]);
+    char *dot = strrchr(base_filename, '.');
+    if (dot)
+    {
+        *dot = '\0';
     }
 
     Lexer *lexer = init_lexer(source);
@@ -657,14 +888,20 @@ int main(int argc, char **argv)
                token->column);
     }
 
-    // コンパイルフェーズは今後実装予定
-    printf("\n簡易的なコンパイラです。現在はトークン解析のみ実装しています。\n");
-    printf("今後の実装予定：\n");
-    printf("1. 構文解析（パーサー）\n");
-    printf("2. コード生成\n");
-    printf("3. 最適化\n");
+    // パース・コード生成
+    printf("\n構文解析・コード生成を開始します...\n");
+    Parser *parser = init_parser(lexer->tokens, lexer->token_count);
+    parse_program(parser);
+
+    // アセンブリコードの出力
+    output_assembly(parser, base_filename);
+
+    // アセンブリコードをコンパイル
+    printf("\nアセンブリコードをコンパイルします...\n");
+    compile_assembly(base_filename);
 
     free(source);
+    free_parser(parser);
     free_lexer(lexer);
 
     return 0;

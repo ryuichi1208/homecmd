@@ -142,3 +142,7 @@ cython_debug/s
 
 jit/simple_compiler
 jit/hello
+jit/hello.o
+jit/hello.s
+jit/hello.asm
+jit/hello_asm_exe

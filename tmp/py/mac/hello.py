@@ -1,6 +1,6 @@
-def main():
-    print("Hello from mac!")
+class MyClass:
+    def __init__(self):
+        pass
 
-
-if __name__ == "__main__":
-    main()
+    def my_method(self) -> str:
+        return "original_value"

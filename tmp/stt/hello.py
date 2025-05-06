@@ -8,7 +8,6 @@ import pyttsx3
 import pyaudio
 import wave
 from google import genai
-from google.genai import types
 import datetime
 
 from collections.abc import Sequence

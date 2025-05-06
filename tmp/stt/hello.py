@@ -152,7 +152,12 @@ def record_audio(sample_format: int = pyaudio.paInt16, channels: int = 1) -> str
 
     try:
         p = pyaudio.PyAudio()
-        stream = p.open(format=sample_format, channels=channels, rate=RATE, input=True, frames_per_buffer=CHUNK)
+        stream = p.open(
+                format=sample_format,
+                channels=channels,
+                rate=RATE,
+                input=True,
+                frames_per_buffer=CHUNK)
         log_json("INFO", "Start recording")
     except Exception as e:
         log_json("ERROR", "Failed to open audio stream", error=str(e))
@@ -225,6 +230,48 @@ def gemini_llm(text: str, token: str) -> str:
     return response.text
 
 
+def play_audio(file_path: str, file_type: str = "wav"):
+    """Play audio file using pyaudio"""
+    if not os.path.exists(file_path):
+        log_json("ERROR", "Audio file does not exist", file_path=file_path)
+        return
+
+    if file_type not in ["wav", "mp3"]:
+        log_json("ERROR", "Unsupported audio file type", file_type=file_type)
+        return
+
+    if file_type == "mp3":
+        import pydub
+        from pydub.playback import play
+
+        audio = pydub.AudioSegment.from_mp3(file_path)
+        play(audio)
+        log_json("INFO", "Playing audio", file_path=file_path)
+        log_json("INFO", "Audio playback finished")
+    elif file_type == "wav":
+        import wave
+        import pyaudio
+
+        chunk = 1024
+        wf = wave.open(file_path, "rb")
+        p = pyaudio.PyAudio()
+        stream = p.open(
+            format=p.get_format_from_width(wf.getsampwidth()),
+            channels=wf.getnchannels(),
+            rate=wf.getframerate(),
+            output=True,
+        )
+
+        data = wf.readframes(chunk)
+        while data:
+            stream.write(data)
+            data = wf.readframes(chunk)
+
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
+
 async def main(args: Sequence[str]):
     # Check environment variables at the start
     if not check_environment_variables():
@@ -243,6 +290,8 @@ async def main(args: Sequence[str]):
         model = whisper.load_model("medium")
 
         # Record audio
+        read_text("音声を入力してください", rate=180, volume=0.9)
+        play_audio("data/piron.mp3", "mp3")
         input_file = record_audio()
         start_time = time.time()
         result = model.transcribe(input_file, fp16=False)
@@ -274,6 +323,11 @@ async def main(args: Sequence[str]):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        log_json("ERROR", "Server script path is not specified")
+        log_json("INFO", "Usage: python hello.py <server_script.py>")
+        sys.exit(1)
+
     try:
         log_json("INFO", "Starting script")
         asyncio.run(main(sys.argv))

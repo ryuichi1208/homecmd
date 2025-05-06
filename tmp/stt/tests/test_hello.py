@@ -1,11 +1,10 @@
 import pytest
-import os
 from unittest.mock import patch, call
 
 # hello.pyからテスト対象の関数をインポート
 # PYTHONPATHにカレントディレクトリが含まれている必要がある場合がある
 # 例: export PYTHONPATH=$PYTHONPATH:.
-from hello import check_environment_variables, log_json
+from hello import check_environment_variables
 
 
 @pytest.fixture(autouse=True)

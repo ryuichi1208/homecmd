@@ -1,6 +1,7 @@
 import httpx
 import os
 import asyncio
+import pytest
 
 
 class Mackerel:
@@ -33,6 +34,11 @@ async def main():
     hosts = await mackerel.get_hosts()
     Mackerel.print_json(hosts)
 
+def yield_hello():
+    yield
+
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+

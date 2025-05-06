@@ -9,4 +9,5 @@ dependencies = [
     "httpx>=0.28.1",
     "numpy>=2.2.5",
     "pytest-mock>=3.14.0",
+    "requests>=2.32.3",
 ]

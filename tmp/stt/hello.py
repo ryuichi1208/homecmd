@@ -54,7 +54,7 @@ def check_environment_variables():
 
 
 class MCPClient:
-    def __init__(self):
+    def __init__(self, command: str = None):
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
         self.anthropic = Anthropic()
@@ -62,12 +62,13 @@ class MCPClient:
             api_key=os.getenv("GEMINI_API_KEY"),
             base_url="https://generativelanguage.googleapis.com/v1beta/",
         )
+        self.command = command
 
     async def connect_to_server(self, server_script_path: str):
         if not server_script_path.endswith(".py"):
             raise ValueError("Server script must be a .py file.")
 
-        command = "python"
+        command = self.command or sys.executable
         server_params = StdioServerParameters(command=command, args=[server_script_path], env=None)
 
         stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))

@@ -152,12 +152,7 @@ def record_audio(sample_format: int = pyaudio.paInt16, channels: int = 1) -> str
 
     try:
         p = pyaudio.PyAudio()
-        stream = p.open(
-                format=sample_format,
-                channels=channels,
-                rate=RATE,
-                input=True,
-                frames_per_buffer=CHUNK)
+        stream = p.open(format=sample_format, channels=channels, rate=RATE, input=True, frames_per_buffer=CHUNK)
         log_json("INFO", "Start recording")
     except Exception as e:
         log_json("ERROR", "Failed to open audio stream", error=str(e))
@@ -278,7 +273,10 @@ async def main(args: Sequence[str]):
         log_json("CRITICAL", "Exiting due to missing required environment variables.")
         sys.exit(1)  # Exit if critical variables are missing
 
-    input_file = None
+    # Load the Whisper model
+    model = whisper.load_model("medium")
+    client = MCPClient()  # MCPClientをループの外で初期化
+
     try:
         if len(args) < 2:
             error_msg = "Server script path is not specified"
@@ -286,41 +284,67 @@ async def main(args: Sequence[str]):
             log_json("INFO", "Usage: python hello.py <server_script.py>")
             return  # Exit gracefully if usage is incorrect
 
-        # Load the Whisper model
-        model = whisper.load_model("medium")
+        log_json("INFO", "Connecting to server")
+        await client.connect_to_server(sys.argv[1])  # サーバーへの接続もループの外
 
-        # Record audio
-        read_text("音声を入力してください", rate=180, volume=0.9)
-        play_audio("data/piron.mp3", "mp3")
-        input_file = record_audio()
-        start_time = time.time()
-        result = model.transcribe(input_file, fp16=False)
-        end_time = time.time()
-        log_json("INFO", "Transcription completed", text=result["text"], execution_time=end_time - start_time)
+        while True:  # 会話ループを開始
+            input_file = None
+            try:
+                # Record audio
+                read_text("音声を入力してください", rate=180, volume=0.9)
+                play_audio("data/piron.mp3", "mp3")
+                input_file = record_audio()
+                if input_file is None:  # record_audioが失敗した場合
+                    log_json("ERROR", "Audio recording failed. Skipping this iteration.")
+                    read_text("録音に失敗しました。もう一度お試しください。", rate=180, volume=0.9)
+                    continue
 
-        # Read the transcribed text
-        read_text(result["text"])
+                start_time = time.time()
+                result = model.transcribe(input_file, fp16=False)
+                end_time = time.time()
+                transcribed_text = result["text"].strip()
+                log_json("INFO", "Transcription completed", text=transcribed_text, execution_time=end_time - start_time)
 
-        # if you want to use Gemini LLM, uncomment the following line
-        # Generate content using Gemini LLM
-        # res = gemini_llm(result["text"], api_key=os.getenv("GEMINI_API_KEY"))
+                # Read the transcribed text
+                read_text(transcribed_text)
 
-        try:
-            client = MCPClient()
-            log_json("INFO", "Connecting to server")
-            await client.connect_to_server(sys.argv[1])
-            log_json("INFO", "Processing query")
-            response = await client.process_query(result["text"])
-            log_json("INFO", "Response received", response=response)
-            read_text(response)
-        finally:
-            await client.cleanup()
+                end_words = ["終了", "おわり", "お疲れ様でした"]
+                if transcribed_text in end_words:
+                    log_json("INFO", "Exit command detected.")
+                    read_text("終了します。")
+                    break  # ループを抜ける
+
+                # if you want to use Gemini LLM, uncomment the following line
+                # Generate content using Gemini LLM
+                # res = gemini_llm(result["text"], api_key=os.getenv("GEMINI_API_KEY"))
+
+                log_json("INFO", "Processing query")
+                response = await client.process_query(transcribed_text)
+                log_json("INFO", "Response received", response=response)
+                read_text(response)
+
+            except KeyboardInterrupt:
+                log_json("INFO", "Keyboard interrupt detected. Exiting loop.")
+                read_text("中断しました。")
+                break
+            except Exception as e:
+                log_json("ERROR", "An error occurred in the main loop", error=str(e))
+                read_text("エラーが発生しました。処理を続行します。")
+            finally:
+                if input_file and os.path.exists(input_file):
+                    log_json("INFO", "Deleting temporary file", file=input_file)
+                    os.remove(input_file)
+                # else: # input_fileがNoneの場合や存在しない場合のログは冗長なので削除
+                #    log_json("INFO", "No file to delete or already deleted")
+
+    except Exception as e:  # main関数レベルでの予期せぬエラー
+        log_json("CRITICAL", "An unhandled exception occurred in main", error=str(e))
+        read_text("重大なエラーが発生しました。スクリプトを終了します。")
     finally:
-        if input_file and os.path.exists(input_file):
-            log_json("INFO", "Deleting temporary file", file=input_file)
-            os.remove(input_file)
-        else:
-            log_json("INFO", "No file to delete")
+        if client.session:  # client.sessionが存在する場合のみクリーンアップ
+            log_json("INFO", "Cleaning up MCP client.")
+            await client.cleanup()
+        log_json("INFO", "Main function finished.")
 
 
 if __name__ == "__main__":

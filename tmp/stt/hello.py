@@ -17,10 +17,14 @@ from dotenv import load_dotenv
 from mcp import ClientSession, StdioServerParameters, stdio_client
 from openai import OpenAI
 
+from dataclasses import dataclass, field
+from typing import List, Dict, Any, Optional
+
 load_dotenv()
 
 MODEL_NAME = "gemini-2.0-flash"
 MAX_TOKENS = 1000
+SLOTS_FILE = "./slots.json"
 
 
 def log_json(level: str, message: str, **kwargs):
@@ -267,34 +271,148 @@ def play_audio(file_path: str, file_type: str = "wav"):
         p.terminate()
 
 
+@dataclass
+class SlotDefinition:
+    name: str
+    prompt: str
+    required: bool
+
+
+class SlotFillingSession:
+    def __init__(self, intent_name: str, slot_definitions_dict: List[Dict[str, Any]], confirmation_template: str):
+        self.intent_name = intent_name
+        self.slot_definitions = [SlotDefinition(**sd) for sd in slot_definitions_dict]
+        self.confirmation_template = confirmation_template
+        self.filled_values: Dict[str, Any] = {}
+        self.current_target_slot: Optional[SlotDefinition] = None
+        log_json("INFO", f"SlotFillingSession initialized for intent: {intent_name}")
+
+    def get_next_slot_to_fill(self) -> Optional[SlotDefinition]:
+        # 必須スロットを優先して探す
+        for slot_def in self.slot_definitions:
+            if slot_def.required and slot_def.name not in self.filled_values:
+                self.current_target_slot = slot_def
+                log_json("DEBUG", f"Next slot to fill (required): {slot_def.name}")
+                return slot_def
+
+        # 次に任意スロットを探す
+        for slot_def in self.slot_definitions:
+            if not slot_def.required and slot_def.name not in self.filled_values:
+                self.current_target_slot = slot_def
+                log_json("DEBUG", f"Next slot to fill (optional): {slot_def.name}")
+                return slot_def
+
+        self.current_target_slot = None
+        log_json("DEBUG", "No more slots to fill.")
+        return None
+
+    def attempt_fill_current_slot(self, user_response: str) -> bool:
+        if self.current_target_slot:
+            slot_name = self.current_target_slot.name
+            # 簡単な「なし」の処理（任意スロット用）
+            if not self.current_target_slot.required and user_response.strip() in [
+                "なし",
+                "特にない",
+                "いらない",
+                "不要",
+            ]:
+                self.filled_values[slot_name] = None  # 明示的にNoneをセットするか、キー自体を入れないか。ここではNone
+                log_json("INFO", f"Optional slot '{slot_name}' skipped by user.")
+            else:
+                self.filled_values[slot_name] = user_response
+                log_json("INFO", f"Slot '{slot_name}' filled with value: '{user_response}'")
+
+            # 埋めたのでリセット
+            # self.current_target_slot = None # ここでリセットすると、is_all_slots_filled_or_attempted のロジックに影響する可能性
+            return True
+        log_json("WARNING", "Attempted to fill slot, but no current_target_slot was set.")
+        return False
+
+    def is_all_slots_filled_or_attempted(self) -> bool:
+        """全ての定義されたスロットが埋まっているか、試みられた（current_target_slotがNoneになった）かを確認"""
+        # 全ての required スロットが埋まっていることを確認
+        for slot_def in self.slot_definitions:
+            if slot_def.required and slot_def.name not in self.filled_values:
+                return False
+        # この時点で必須スロットは全て埋まっている
+        # 次にget_next_slot_to_fillを呼んだ結果がNoneなら、任意スロットも全て確認済み
+        return self.get_next_slot_to_fill() is None
+
+    def get_formatted_confirmation(self) -> str:
+        message = self.confirmation_template
+        # プレースホルダーの置換と、値がない場合の処理
+        for slot_def in self.slot_definitions:
+            placeholder = f"{{{slot_def.name}}}"
+            value = self.filled_values.get(slot_def.name)
+            if value is not None:
+                message = message.replace(placeholder, str(value))
+            else:
+                # 値がNoneまたは存在しない場合、プレースホルダを空文字にするか、文脈に応じた文字列に。
+                # 例えば「{duration}の」のような部分が「の」だけ残らないように注意が必要。
+                # 簡単のため、ここでは値がない場合は「(指定なし)」とするか、プレースホルダ自体を削除。
+                # 今回は、slot値がNoneなら「(指定なし)」に。
+                message = message.replace(placeholder, "(指定なし)")
+        return message
+
+
+def load_slot_definitions(file_path: str) -> Dict[str, Dict[str, Any]]:
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            definitions = json.load(f)
+            log_json("INFO", "Slot definitions loaded successfully.", file_path=file_path)
+            return definitions
+    except FileNotFoundError:
+        log_json("ERROR", "Slot definitions file not found.", file_path=file_path)
+        return {}
+    except json.JSONDecodeError as e:
+        log_json("ERROR", "Failed to decode slot definitions JSON.", file_path=file_path, error=str(e))
+        return {}
+    except Exception as e:
+        log_json(
+            "ERROR", "An unexpected error occurred while loading slot definitions.", file_path=file_path, error=str(e)
+        )
+        return {}
+
+
 async def main(args: Sequence[str]):
     # Check environment variables at the start
     if not check_environment_variables():
         log_json("CRITICAL", "Exiting due to missing required environment variables.")
-        sys.exit(1)  # Exit if critical variables are missing
+        sys.exit(1)
+
+    # Load slot definitions
+    slot_definitions_by_intent = load_slot_definitions(SLOTS_FILE)
+    if not slot_definitions_by_intent:
+        log_json("WARNING", "No slot definitions loaded. Slot filling will be unavailable.")
 
     # Load the Whisper model
     model = whisper.load_model("medium")
-    client = MCPClient()  # MCPClientをループの外で初期化
+    client = MCPClient()
+
+    active_slot_filling_session: Optional[SlotFillingSession] = None
 
     try:
         if len(args) < 2:
             error_msg = "Server script path is not specified"
             log_json("ERROR", error_msg)
             log_json("INFO", "Usage: python hello.py <server_script.py>")
-            return  # Exit gracefully if usage is incorrect
+            return
 
         log_json("INFO", "Connecting to server")
-        await client.connect_to_server(sys.argv[1])  # サーバーへの接続もループの外
+        await client.connect_to_server(sys.argv[1])
 
-        while True:  # 会話ループを開始
+        first_time = True
+        while True:
             input_file = None
             try:
-                # Record audio
-                read_text("音声を入力してください", rate=180, volume=0.9)
+                if first_time:
+                    first_time = False
+                    read_text("音声を入力してください", rate=180, volume=0.9)
+
                 play_audio("data/piron.mp3", "mp3")
+
                 input_file = record_audio()
-                if input_file is None:  # record_audioが失敗した場合
+                if input_file is None:
                     log_json("ERROR", "Audio recording failed. Skipping this iteration.")
                     read_text("録音に失敗しました。もう一度お試しください。", rate=180, volume=0.9)
                     continue
@@ -304,24 +422,96 @@ async def main(args: Sequence[str]):
                 end_time = time.time()
                 transcribed_text = result["text"].strip()
                 log_json("INFO", "Transcription completed", text=transcribed_text, execution_time=end_time - start_time)
-
-                # Read the transcribed text
                 read_text(transcribed_text)
 
                 end_words = ["終了", "おわり", "お疲れ様でした"]
                 if transcribed_text in end_words:
                     log_json("INFO", "Exit command detected.")
                     read_text("終了します。")
-                    break  # ループを抜ける
+                    break
 
-                # if you want to use Gemini LLM, uncomment the following line
-                # Generate content using Gemini LLM
-                # res = gemini_llm(result["text"], api_key=os.getenv("GEMINI_API_KEY"))
+                # --- Slot Filling Logic --- START ---
+                if active_slot_filling_session:
+                    # スロットフィリングセッションがアクティブな場合
+                    if active_slot_filling_session.current_target_slot:
+                        active_slot_filling_session.attempt_fill_current_slot(transcribed_text)
+                        # current_target_slot は attempt_fill_current_slot の中で None にはしない。
+                        # 次の質問は get_next_slot_to_fill で決定する。
+                    else:
+                        # 通常ここには来ないはず。来た場合は警告ログ。
+                        log_json(
+                            "WARNING",
+                            "active_slot_filling_session is active, but current_target_slot is None before getting next slot.",
+                        )
 
-                log_json("INFO", "Processing query")
-                response = await client.process_query(transcribed_text)
-                log_json("INFO", "Response received", response=response)
-                read_text(response)
+                    next_slot_def = active_slot_filling_session.get_next_slot_to_fill()
+                    if next_slot_def:
+                        # 次に埋めるべきスロットがある場合
+                        read_text(next_slot_def.prompt)
+                    else:
+                        # 全てのスロットが埋まった（または試みられた）場合
+                        confirmation_message = active_slot_filling_session.get_formatted_confirmation()
+                        read_text(confirmation_message)
+                        log_json(
+                            "INFO",
+                            "Slot filling completed.",
+                            intent=active_slot_filling_session.intent_name,
+                            slots=active_slot_filling_session.filled_values,
+                        )
+
+                        # MCPに送信するペイロードを作成
+                        payload = {
+                            "intent": active_slot_filling_session.intent_name,
+                            "slots": active_slot_filling_session.filled_values,
+                        }
+                        # process_queryは文字列を期待するのでjson.dumpsする
+                        response_from_mcp = await client.process_query(json.dumps(payload, ensure_ascii=False))
+                        log_json("INFO", "Response from MCP after slot filling", response=response_from_mcp)
+                        read_text(response_from_mcp)
+                        active_slot_filling_session = None  # セッション終了
+
+                else:
+                    # スロットフィリングセッションがアクティブでない場合、インテントを判定
+                    # (簡易的なキーワードベースのインテント判定)
+                    intent_to_start = None
+                    if (
+                        "旅行" in transcribed_text
+                        and ("予約" in transcribed_text or "行きたい" in transcribed_text)
+                        and "travel_booking" in slot_definitions_by_intent
+                    ):
+                        intent_to_start = "travel_booking"
+                    elif (
+                        ("レストラン" in transcribed_text or "食事" in transcribed_text)
+                        and "予約" in transcribed_text
+                        and "restaurant_booking" in slot_definitions_by_intent
+                    ):
+                        intent_to_start = "restaurant_booking"
+                    # 他のインテント判定を追加可能
+
+                    if intent_to_start and slot_definitions_by_intent.get(intent_to_start):
+                        intent_config = slot_definitions_by_intent[intent_to_start]
+                        active_slot_filling_session = SlotFillingSession(
+                            intent_name=intent_to_start,
+                            slot_definitions_dict=intent_config["slots"],
+                            confirmation_template=intent_config["confirmation_message"],
+                        )
+                        log_json("INFO", f"Starting slot filling session for intent: {intent_to_start}")
+                        first_slot_to_fill = active_slot_filling_session.get_next_slot_to_fill()
+                        if first_slot_to_fill:
+                            read_text(first_slot_to_fill.prompt)
+                        else:
+                            log_json(
+                                "WARNING", f"No slots to fill for intent '{intent_to_start}', though session started."
+                            )
+                            read_text("情報を伺いたいのですが、うまく始められませんでした。")
+                            active_slot_filling_session = None  # 開始失敗
+                    else:
+                        # スロットフィリングを開始しない通常の会話
+                        log_json("INFO", "No slot filling intent detected, processing as normal query.")
+                        response = await client.process_query(transcribed_text)
+                        log_json("INFO", "Response received (normal query)", response=response)
+                        read_text(response)
+                # --- Slot Filling Logic --- END ---
 
             except KeyboardInterrupt:
                 log_json("INFO", "Keyboard interrupt detected. Exiting loop.")

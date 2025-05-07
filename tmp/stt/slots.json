@@ -1,0 +1,52 @@
+{
+  "travel_booking": {
+    "slots": [
+      {
+        "name": "destination",
+        "prompt": "どちらへ行かれますか？",
+        "required": true
+      },
+      {
+        "name": "departure_date",
+        "prompt": "いつ出発されますか？",
+        "required": true
+      },
+      {
+        "name": "duration",
+        "prompt": "何日間ご滞在されますか？ (例: 3日間)",
+        "required": false
+      },
+      {
+        "name": "number_of_people",
+        "prompt": "何名様ですか？",
+        "required": true
+      }
+    ],
+    "confirmation_message": "{departure_date}から{destination}へ{number_of_people}名様で、{duration}のご旅行ですね。この内容でよろしいですか？"
+  },
+  "restaurant_booking": {
+    "slots": [
+      {
+        "name": "cuisine",
+        "prompt": "どのようなジャンルのお店がよろしいですか？",
+        "required": true
+      },
+      {
+        "name": "num_people",
+        "prompt": "何名様ですか？",
+        "required": true
+      },
+      {
+        "name": "date_time",
+        "prompt": "いつ、何時ごろがよろしいですか？",
+        "required": true
+      },
+      {
+        "name": "occasion",
+        "prompt": "何か特別な機会でのご利用ですか？ (例: 誕生日、記念日など。特にない場合は「なし」とどうぞ)",
+        "required": false
+      }
+    ],
+    "confirmation_message": "{num_people}名様で{date_time}に{cuisine}料理のご予約ですね。目的は{occasion}ですね。この内容でよろしいですか？"
+  }
+}

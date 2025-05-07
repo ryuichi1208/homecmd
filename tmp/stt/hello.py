@@ -301,6 +301,7 @@ async def main(args: Sequence[str]):
         # Read the transcribed text
         read_text(result["text"])
 
+        # if you want to use Gemini LLM, uncomment the following line
         # Generate content using Gemini LLM
         # res = gemini_llm(result["text"], api_key=os.getenv("GEMINI_API_KEY"))
 

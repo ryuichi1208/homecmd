@@ -29,7 +29,7 @@ require (
 	github.com/go-openapi/validate v0.20.2 // indirect
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible
 	github.com/goji/httpauth v0.0.0-20160601135302-2da839ab0f4d
-	github.com/hajimehoshi/oto v0.7.1
+	github.com/hajimehoshi/oto v0.7.3
 	github.com/hako/branca v0.0.0-20200807062402-6052ac720505
 	github.com/juju/errors v0.0.0-20200330140219-3fe23663418f // indirect
 	github.com/markbates/goth v1.67.1

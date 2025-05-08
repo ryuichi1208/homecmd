@@ -1,7 +1,6 @@
 import os
 import json
 import sys
-import asyncio
 import time
 import whisper
 import pyttsx3
@@ -17,7 +16,7 @@ from dotenv import load_dotenv
 from mcp import ClientSession, StdioServerParameters, stdio_client
 from openai import OpenAI
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 
 load_dotenv()
@@ -29,7 +28,11 @@ SLOTS_FILE = "./slots.json"
 
 def log_json(level: str, message: str, **kwargs):
     """Outputs logs in JSON format"""
-    log_entry = {"timestamp": datetime.datetime.now().isoformat(), "level": level, "message": message}
+    log_entry = {
+        "timestamp": datetime.datetime.now().isoformat(),
+        "level": level,
+        "message": message,
+    }
     if kwargs:
         log_entry.update(kwargs)
     print(json.dumps(log_entry, ensure_ascii=False))
@@ -46,11 +49,23 @@ def check_environment_variables():
     for var, description in required_vars.items():
         if not os.getenv(var):
             missing_vars.append(var)
-            log_json("ERROR", f"Required environment variable {var} is not set", variable=var, description=description)
+            log_json(
+                "ERROR",
+                f"Required environment variable {var} is not set",
+                variable=var,
+                description=description,
+            )
 
     if missing_vars:
-        log_json("CRITICAL", "Missing required environment variables", missing_variables=missing_vars)
-        log_json("INFO", "Environment variables should be set in a .env file or as system environment variables.")
+        log_json(
+            "CRITICAL",
+            "Missing required environment variables",
+            missing_variables=missing_vars,
+        )
+        log_json(
+            "INFO",
+            "Environment variables should be set in a .env file or as system environment variables.",
+        )
         return False
 
     log_json("INFO", "Environment variable check passed.", status="success")
@@ -73,17 +88,27 @@ class MCPClient:
             raise ValueError("Server script must be a .py file.")
 
         command = self.command or sys.executable
-        server_params = StdioServerParameters(command=command, args=[server_script_path], env=None)
+        server_params = StdioServerParameters(
+            command=command, args=[server_script_path], env=None
+        )
 
-        stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
+        stdio_transport = await self.exit_stack.enter_async_context(
+            stdio_client(server_params)
+        )
         self.stdio, self.write = stdio_transport
-        self.session = await self.exit_stack.enter_async_context(ClientSession(self.stdio, self.write))
+        self.session = await self.exit_stack.enter_async_context(
+            ClientSession(self.stdio, self.write)
+        )
 
         await self.session.initialize()
 
         response = await self.session.list_tools()
         self.available_tools = response.tools
-        log_json("INFO", "Connection established", tools=[tool.name for tool in self.available_tools])
+        log_json(
+            "INFO",
+            "Connection established",
+            tools=[tool.name for tool in self.available_tools],
+        )
 
     async def process_query(self, query: str) -> str:
         messages = [{"role": "user", "content": query}]
@@ -118,7 +143,9 @@ class MCPClient:
 
             tool_args = json.loads(tool_call.function.arguments)
             tool_result = await self.session.call_tool(tool_name, tool_args)
-            tool_result_contents = [content.model_dump() for content in tool_result.content]
+            tool_result_contents = [
+                content.model_dump() for content in tool_result.content
+            ]
             final_text.append(f"[Calling tool {tool_name} with args {tool_args}]")
             messages.append(
                 {
@@ -156,7 +183,13 @@ def record_audio(sample_format: int = pyaudio.paInt16, channels: int = 1) -> str
 
     try:
         p = pyaudio.PyAudio()
-        stream = p.open(format=sample_format, channels=channels, rate=RATE, input=True, frames_per_buffer=CHUNK)
+        stream = p.open(
+            format=sample_format,
+            channels=channels,
+            rate=RATE,
+            input=True,
+            frames_per_buffer=CHUNK,
+        )
         log_json("INFO", "Start recording")
     except Exception as e:
         log_json("ERROR", "Failed to open audio stream", error=str(e))
@@ -225,7 +258,9 @@ def gemini_llm(text: str, token: str) -> str:
         raise ValueError("Text is required")
 
     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-    response = client.models.generate_content(model="gemini-2.0-flash-001", contents=text)
+    response = client.models.generate_content(
+        model="gemini-2.0-flash-001", contents=text
+    )
     return response.text
 
 
@@ -279,7 +314,12 @@ class SlotDefinition:
 
 
 class SlotFillingSession:
-    def __init__(self, intent_name: str, slot_definitions_dict: List[Dict[str, Any]], confirmation_template: str):
+    def __init__(
+        self,
+        intent_name: str,
+        slot_definitions_dict: List[Dict[str, Any]],
+        confirmation_template: str,
+    ):
         self.intent_name = intent_name
         self.slot_definitions = [SlotDefinition(**sd) for sd in slot_definitions_dict]
         self.confirmation_template = confirmation_template
@@ -316,16 +356,22 @@ class SlotFillingSession:
                 "いらない",
                 "不要",
             ]:
-                self.filled_values[slot_name] = None  # 明示的にNoneをセットするか、キー自体を入れないか。ここではNone
+                self.filled_values[slot_name] = (
+                    None  # 明示的にNoneをセットするか、キー自体を入れないか。ここではNone
+                )
                 log_json("INFO", f"Optional slot '{slot_name}' skipped by user.")
             else:
                 self.filled_values[slot_name] = user_response
-                log_json("INFO", f"Slot '{slot_name}' filled with value: '{user_response}'")
+                log_json(
+                    "INFO", f"Slot '{slot_name}' filled with value: '{user_response}'"
+                )
 
             # 埋めたのでリセット
             # self.current_target_slot = None # ここでリセットすると、is_all_slots_filled_or_attempted のロジックに影響する可能性
             return True
-        log_json("WARNING", "Attempted to fill slot, but no current_target_slot was set.")
+        log_json(
+            "WARNING", "Attempted to fill slot, but no current_target_slot was set."
+        )
         return False
 
     def is_all_slots_filled_or_attempted(self) -> bool:
@@ -359,19 +405,102 @@ def load_slot_definitions(file_path: str) -> Dict[str, Dict[str, Any]]:
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             definitions = json.load(f)
-            log_json("INFO", "Slot definitions loaded successfully.", file_path=file_path)
+            log_json(
+                "INFO", "Slot definitions loaded successfully.", file_path=file_path
+            )
             return definitions
     except FileNotFoundError:
         log_json("ERROR", "Slot definitions file not found.", file_path=file_path)
         return {}
     except json.JSONDecodeError as e:
-        log_json("ERROR", "Failed to decode slot definitions JSON.", file_path=file_path, error=str(e))
+        log_json(
+            "ERROR",
+            "Failed to decode slot definitions JSON.",
+            file_path=file_path,
+            error=str(e),
+        )
         return {}
     except Exception as e:
         log_json(
-            "ERROR", "An unexpected error occurred while loading slot definitions.", file_path=file_path, error=str(e)
+            "ERROR",
+            "An unexpected error occurred while loading slot definitions.",
+            file_path=file_path,
+            error=str(e),
         )
         return {}
+
+
+class GeminiLLM:
+    def __init__(self, token: str):
+        if not token:
+            raise ValueError("API key is required")
+        self.token = token
+        self.client = genai.Client(api_key=self.token)
+        self.context = ""
+
+    def generate_content(self, text: str) -> str:
+        """Generate content using Gemini LLM while maintaining conversation context."""
+        if not text:
+            raise ValueError("Text is required")
+
+        # Add the new user input to the context
+        self.context += f"User: {text}\n"
+
+        print("Current context:", self.context)
+
+        # Generate response based on the updated context
+        response = self.client.models.generate_content(
+            model="gemini-2.0-flash-001", contents=self.context
+        )
+
+        # Get the response and add it to the context
+        response_text = response.text
+        self.context += f"AI: {response_text}\n"
+
+        return response_text
+
+
+async def llm_loop():
+    """Main loop for LLM interaction"""
+    model = whisper.load_model("medium")
+    gemini = GeminiLLM(token=os.getenv("GEMINI_API_KEY"))
+    first_time = True
+    while True:
+        input_file = None
+        try:
+            if first_time:
+                first_time = False
+                read_text("音声を入力してください", rate=180, volume=0.9)
+
+            play_audio("data/piron.mp3", "mp3")
+
+            input_file = record_audio()
+            if input_file is None:
+                log_json("ERROR", "Audio recording failed. Skipping this iteration.")
+                read_text(
+                    "録音に失敗しました。もう一度お試しください。", rate=180, volume=0.9
+                )
+                continue
+
+            start_time = time.time()
+            result = model.transcribe(input_file, fp16=False)
+            end_time = time.time()
+            transcribed_text = result["text"].strip()
+            log_json(
+                "INFO",
+                "Transcription completed",
+                text=transcribed_text,
+                execution_time=end_time - start_time,
+            )
+            response = gemini.generate_content(transcribed_text)
+            read_text(response)
+            print(f"AI: {response}")
+        except KeyboardInterrupt:
+            print("\nExiting LLM loop.")
+            break
+        except Exception as e:
+            log_json("ERROR", "An error occurred in the LLM loop", error=str(e))
+            print("An error occurred. Please try again.")
 
 
 async def main(args: Sequence[str]):
@@ -383,7 +512,9 @@ async def main(args: Sequence[str]):
     # Load slot definitions
     slot_definitions_by_intent = load_slot_definitions(SLOTS_FILE)
     if not slot_definitions_by_intent:
-        log_json("WARNING", "No slot definitions loaded. Slot filling will be unavailable.")
+        log_json(
+            "WARNING", "No slot definitions loaded. Slot filling will be unavailable."
+        )
 
     # Load the Whisper model
     model = whisper.load_model("medium")
@@ -393,9 +524,7 @@ async def main(args: Sequence[str]):
 
     try:
         if len(args) < 2:
-            error_msg = "Server script path is not specified"
-            log_json("ERROR", error_msg)
-            log_json("INFO", "Usage: python hello.py <server_script.py>")
+            await llm_loop()
             return
 
         log_json("INFO", "Connecting to server")
@@ -413,15 +542,26 @@ async def main(args: Sequence[str]):
 
                 input_file = record_audio()
                 if input_file is None:
-                    log_json("ERROR", "Audio recording failed. Skipping this iteration.")
-                    read_text("録音に失敗しました。もう一度お試しください。", rate=180, volume=0.9)
+                    log_json(
+                        "ERROR", "Audio recording failed. Skipping this iteration."
+                    )
+                    read_text(
+                        "録音に失敗しました。もう一度お試しください。",
+                        rate=180,
+                        volume=0.9,
+                    )
                     continue
 
                 start_time = time.time()
                 result = model.transcribe(input_file, fp16=False)
                 end_time = time.time()
                 transcribed_text = result["text"].strip()
-                log_json("INFO", "Transcription completed", text=transcribed_text, execution_time=end_time - start_time)
+                log_json(
+                    "INFO",
+                    "Transcription completed",
+                    text=transcribed_text,
+                    execution_time=end_time - start_time,
+                )
                 read_text(transcribed_text)
 
                 end_words = ["終了", "おわり", "お疲れ様でした"]
@@ -434,7 +574,9 @@ async def main(args: Sequence[str]):
                 if active_slot_filling_session:
                     # スロットフィリングセッションがアクティブな場合
                     if active_slot_filling_session.current_target_slot:
-                        active_slot_filling_session.attempt_fill_current_slot(transcribed_text)
+                        active_slot_filling_session.attempt_fill_current_slot(
+                            transcribed_text
+                        )
                         # current_target_slot は attempt_fill_current_slot の中で None にはしない。
                         # 次の質問は get_next_slot_to_fill で決定する。
                     else:
@@ -450,7 +592,9 @@ async def main(args: Sequence[str]):
                         read_text(next_slot_def.prompt)
                     else:
                         # 全てのスロットが埋まった（または試みられた）場合
-                        confirmation_message = active_slot_filling_session.get_formatted_confirmation()
+                        confirmation_message = (
+                            active_slot_filling_session.get_formatted_confirmation()
+                        )
                         read_text(confirmation_message)
                         log_json(
                             "INFO",
@@ -465,8 +609,14 @@ async def main(args: Sequence[str]):
                             "slots": active_slot_filling_session.filled_values,
                         }
                         # process_queryは文字列を期待するのでjson.dumpsする
-                        response_from_mcp = await client.process_query(json.dumps(payload, ensure_ascii=False))
-                        log_json("INFO", "Response from MCP after slot filling", response=response_from_mcp)
+                        response_from_mcp = await client.process_query(
+                            json.dumps(payload, ensure_ascii=False)
+                        )
+                        log_json(
+                            "INFO",
+                            "Response from MCP after slot filling",
+                            response=response_from_mcp,
+                        )
                         read_text(response_from_mcp)
                         active_slot_filling_session = None  # セッション終了
 
@@ -476,7 +626,9 @@ async def main(args: Sequence[str]):
                     intent_to_start = None
                     if (
                         "旅行" in transcribed_text
-                        and ("予約" in transcribed_text or "行きたい" in transcribed_text)
+                        and (
+                            "予約" in transcribed_text or "行きたい" in transcribed_text
+                        )
                         and "travel_booking" in slot_definitions_by_intent
                     ):
                         intent_to_start = "travel_booking"
@@ -488,28 +640,45 @@ async def main(args: Sequence[str]):
                         intent_to_start = "restaurant_booking"
                     # 他のインテント判定を追加可能
 
-                    if intent_to_start and slot_definitions_by_intent.get(intent_to_start):
+                    if intent_to_start and slot_definitions_by_intent.get(
+                        intent_to_start
+                    ):
                         intent_config = slot_definitions_by_intent[intent_to_start]
                         active_slot_filling_session = SlotFillingSession(
                             intent_name=intent_to_start,
                             slot_definitions_dict=intent_config["slots"],
                             confirmation_template=intent_config["confirmation_message"],
                         )
-                        log_json("INFO", f"Starting slot filling session for intent: {intent_to_start}")
-                        first_slot_to_fill = active_slot_filling_session.get_next_slot_to_fill()
+                        log_json(
+                            "INFO",
+                            f"Starting slot filling session for intent: {intent_to_start}",
+                        )
+                        first_slot_to_fill = (
+                            active_slot_filling_session.get_next_slot_to_fill()
+                        )
                         if first_slot_to_fill:
                             read_text(first_slot_to_fill.prompt)
                         else:
                             log_json(
-                                "WARNING", f"No slots to fill for intent '{intent_to_start}', though session started."
+                                "WARNING",
+                                f"No slots to fill for intent '{intent_to_start}', though session started.",
                             )
-                            read_text("情報を伺いたいのですが、うまく始められませんでした。")
+                            read_text(
+                                "情報を伺いたいのですが、うまく始められませんでした。"
+                            )
                             active_slot_filling_session = None  # 開始失敗
                     else:
                         # スロットフィリングを開始しない通常の会話
-                        log_json("INFO", "No slot filling intent detected, processing as normal query.")
+                        log_json(
+                            "INFO",
+                            "No slot filling intent detected, processing as normal query.",
+                        )
                         response = await client.process_query(transcribed_text)
-                        log_json("INFO", "Response received (normal query)", response=response)
+                        log_json(
+                            "INFO",
+                            "Response received (normal query)",
+                            response=response,
+                        )
                         read_text(response)
                 # --- Slot Filling Logic --- END ---
 
@@ -535,19 +704,3 @@ async def main(args: Sequence[str]):
             log_json("INFO", "Cleaning up MCP client.")
             await client.cleanup()
         log_json("INFO", "Main function finished.")
-
-
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        log_json("ERROR", "Server script path is not specified")
-        log_json("INFO", "Usage: python hello.py <server_script.py>")
-        sys.exit(1)
-
-    try:
-        log_json("INFO", "Starting script")
-        asyncio.run(main(sys.argv))
-    except Exception as e:
-        # Catch any unexpected errors during script execution not caught in main
-        log_json("CRITICAL", "Unhandled exception occurred at top level", error=str(e))
-    finally:
-        log_json("INFO", "Script finished")

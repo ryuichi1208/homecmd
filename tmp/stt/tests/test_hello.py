@@ -26,7 +26,9 @@ def test_check_environment_variables_success(monkeypatch):
         assert result is True
 
         # Assert that the success log message was called
-        mock_log.assert_called_with("INFO", "Environment variable check passed.", status="success")
+        mock_log.assert_called_with(
+            "INFO", "Environment variable check passed.", status="success"
+        )
 
 
 def test_check_environment_variables_failure(monkeypatch):
@@ -49,8 +51,15 @@ def test_check_environment_variables_failure(monkeypatch):
                 variable="GEMINI_API_KEY",
                 description="API key for Gemini API",
             ),
-            call("CRITICAL", "Missing required environment variables", missing_variables=["GEMINI_API_KEY"]),
-            call("INFO", "Environment variables should be set in a .env file or as system environment variables."),
+            call(
+                "CRITICAL",
+                "Missing required environment variables",
+                missing_variables=["GEMINI_API_KEY"],
+            ),
+            call(
+                "INFO",
+                "Environment variables should be set in a .env file or as system environment variables.",
+            ),
         ]
 
         # Assert that log_json was called with the expected arguments

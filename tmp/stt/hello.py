@@ -496,6 +496,10 @@ async def llm_loop():
             break
         except Exception as e:
             log_json("ERROR", "An error occurred in the LLM loop", error=str(e))
+        finally:
+            if input_file and os.path.exists(input_file):
+                log_json("INFO", "Deleting temporary file", file=input_file)
+                os.remove(input_file)
 
 
 async def main(args: Sequence[str]):
@@ -675,7 +679,6 @@ async def main(args: Sequence[str]):
                             response=response,
                         )
                         read_text(response)
-                # --- Slot Filling Logic --- END ---
 
             except KeyboardInterrupt:
                 log_json("INFO", "Keyboard interrupt detected. Exiting loop.")
@@ -688,8 +691,6 @@ async def main(args: Sequence[str]):
                 if input_file and os.path.exists(input_file):
                     log_json("INFO", "Deleting temporary file", file=input_file)
                     os.remove(input_file)
-                # else: # input_fileがNoneの場合や存在しない場合のログは冗長なので削除
-                #    log_json("INFO", "No file to delete or already deleted")
 
     except Exception as e:  # main関数レベルでの予期せぬエラー
         log_json("CRITICAL", "An unhandled exception occurred in main", error=str(e))

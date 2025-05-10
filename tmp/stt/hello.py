@@ -8,6 +8,7 @@ import pyaudio
 import wave
 from google import genai
 import datetime
+from logger import log_json
 
 from collections.abc import Sequence
 from contextlib import AsyncExitStack
@@ -24,18 +25,6 @@ load_dotenv()
 MODEL_NAME = "gemini-2.0-flash"
 MAX_TOKENS = 1000
 SLOTS_FILE = "./slots.json"
-
-
-def log_json(level: str, message: str, **kwargs):
-    """Outputs logs in JSON format"""
-    log_entry = {
-        "timestamp": datetime.datetime.now().isoformat(),
-        "level": level,
-        "message": message,
-    }
-    if kwargs:
-        log_entry.update(kwargs)
-    print(json.dumps(log_entry, ensure_ascii=False))
 
 
 def check_environment_variables():

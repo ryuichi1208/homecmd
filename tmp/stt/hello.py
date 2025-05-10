@@ -446,8 +446,6 @@ class GeminiLLM:
         # Add the new user input to the context
         self.context += f"User: {text}\n"
 
-        print("Current context:", self.context)
-
         # Generate response based on the updated context
         response = self.client.models.generate_content(
             model="gemini-2.0-flash-001", contents=self.context
@@ -494,13 +492,10 @@ async def llm_loop():
             )
             response = gemini.generate_content(transcribed_text)
             read_text(response)
-            print(f"AI: {response}")
         except KeyboardInterrupt:
-            print("\nExiting LLM loop.")
             break
         except Exception as e:
             log_json("ERROR", "An error occurred in the LLM loop", error=str(e))
-            print("An error occurred. Please try again.")
 
 
 async def main(args: Sequence[str]):

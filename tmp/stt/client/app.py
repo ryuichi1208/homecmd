@@ -1,6 +1,8 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import PlainTextResponse
-from twilio.twiml.voice_response import VoiceResponse, Start, Stream
+# from twilio.twiml.voice_response import VoiceResponse, Start, Stream
+from twilio.twiml.voice_response import VoiceResponse, Connect, Stream
+
 
 import os
 import json
@@ -22,28 +24,28 @@ app = FastAPI()
 async def voice_webhook():
     resp = VoiceResponse()
 
-    # Media Stream を開始
     start = Start()
     start.stream(
-        url=f"wss://fc1f-180-23-8-113.ngrok-free.app/ws",  # WebSocket 先
-        track="inbound"                  # 片方向ストリーム（受信のみ）
+        url=f"wss://7e3b-180-23-8-113.ngrok-free.app/ws",
+        track="both",
     )
     resp.append(start)
 
-    # 呼び出し元にガイダンスを流す
-    resp.say("こんにちは。ストリーミングを開始しました。お話しください。")
+    resp.say("こんにちは。こんにちは。", voice="alice", language="ja-JP")
     resp.pause(length=600)
 
-    return str(resp)  # TwiML をそのまま返す
+    return str(resp)
 
 
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
     """Twilio から接続され、音声フレームを受信する WebSocket"""
+    print("[INFO] WebSocket connected")
     await ws.accept()
 
     wav = None  # wave.Writer
     stream_sid = None
+    responded = False
     try:
         while True:
             msg = await ws.receive_text()
@@ -62,15 +64,17 @@ async def ws_endpoint(ws: WebSocket):
                 stream_sid = data["streamSid"]
                 print(f"[INFO] Recording → {path}")
             elif data.get("event") == "media" and wav:
-                # base64 → μ‑law バイト列
+                print(f"[INFO] Received media: {data['media']['payload'][:10]}...")
                 ulaw_bytes = base64.b64decode(data["media"]["payload"])
-                # μ‑law → 16‑bit リニア PCM
                 pcm16 = audioop.ulaw2lin(ulaw_bytes, 2)
                 wav.writeframes(pcm16)
 
-                await speak_text(ws, stream_sid, "入力ありがとうございました。")
+                if not responded and stream_sid:
+                    responded = True
+                    # ❸ 音声ファイルを再生する
+                    print("[INFO] 1")
+                    await play_wav(ws, stream_sid, "recordings/call_20250511_013638.wav")
             elif data.get("event") == "mark" and wav:
-                # 再生完了マーク
                 if data["mark"]["name"] == "tts_end":
                     print("[INFO] TTS playback finished")
             elif data.get("event") == "dtmf":
@@ -90,41 +94,44 @@ async def ws_endpoint(ws: WebSocket):
             print("[INFO] Recording finished")
 
 
-async def speak_text(ws: WebSocket, stream_sid: str, text: str):
-    # 1) TTS → WAV (16 kHz / 16‑bit)
-    engine = pyttsx3.init()
-    buf = io.BytesIO()
-    engine.save_to_file(text, buf)
-    engine.runAndWait()
-    buf.seek(0)
-    wav = AudioSegment.from_file(buf, format="wav")
+async def play_wav(ws, stream_sid: str, wav_path: str):
+    """
+    wav_path の音声を μ‑law 8 kHz に変換し、
+    20 ms (=160 samples) ごとに Twilio へ送信する。
+    """
+    if not os.path.isfile(wav_path):
+        raise FileNotFoundError(wav_path)
 
-    # 2) 8 kHz mono 16‑bit PCM
-    pcm = wav.set_frame_rate(8000).set_sample_width(2).set_channels(1).raw_data
+    seg = AudioSegment.from_file(wav_path)\
+                      .set_frame_rate(8000)\
+                      .set_sample_width(2)\
+                      .set_channels(1)
+    pcm = seg.raw_data                        # type: bytes
 
-    # 3) 20 ms (=160 samples) ごとに μ‑law 変換して送信
-    slice_bytes = 160 * 2
-    for i in range(0, len(pcm), slice_bytes):
-        chunk16 = pcm[i:i + slice_bytes]
-        if len(chunk16) < slice_bytes:
-            break
-        ulaw = audioop.lin2ulaw(chunk16, 2)
+    frame_bytes = 160 * 2
+    for i in range(0, len(pcm), frame_bytes):
+        chunk16 = pcm[i:i + frame_bytes]
+        if len(chunk16) < frame_bytes:
+            break                            # 端数は無視（無音を送っても良い）
+
+        ulaw = audioop.lin2ulaw(chunk16, 2)  # → 160 bytes
         payload = base64.b64encode(ulaw).decode()
+
         await ws.send_text(json.dumps({
             "event": "media",
             "streamSid": stream_sid,
             "media": {"payload": payload}
         }))
-        await asyncio.sleep(0.02)
+        await asyncio.sleep(0.02)            # 20 ms 間隔で送信
 
-    # (任意) 再生完了マーク
     await ws.send_text(json.dumps({
         "event": "mark",
         "streamSid": stream_sid,
-        "mark": {"name": "tts_end"}
+        "mark": {"name": "wav_end"}
     }))
 
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+

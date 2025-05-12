@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi[all]>=0.115.12",
+    "litellm>=1.67.5",
     "llm>=0.25",
     "pydub>=0.25.1",
     "pyttsx3>=2.98",

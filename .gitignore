@@ -146,3 +146,4 @@ jit/hello.o
 jit/hello.s
 jit/hello.asm
 jit/hello_asm_exe
+tmp/stt/client/recordings/*.wav

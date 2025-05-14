@@ -20,4 +20,4 @@ dependencies = [
 ]
 
 [tool.uv.workspace]
-members = ["client"]
+members = ["client", "client/tools"]

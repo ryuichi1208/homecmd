@@ -16,3 +16,6 @@ print(result.output)
 """
 The first known use of "hello, world" was in a 1974 textbook about the C programming language.
 """
+
+t = (10)
+print(t.type())

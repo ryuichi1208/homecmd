@@ -4,7 +4,14 @@ version = "0.1.0"
 description = "A MCP server project"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["httpx>=0.28.1", "mcp>=1.6.0", "python-dotenv>=1.1.0"]
+dependencies = [
+    "httpx>=0.28.1",
+    "mcp>=1.6.0",
+    "python-dotenv>=1.1.0",
+    "strands-agents>=0.0.1",
+    "strands-agents-builder>=0.0.1",
+    "strands-agents-tools>=0.0.1",
+]
 [[project.authors]]
 name = "ryuichi1208"
 email = "ryucrosskey@gmail.com"

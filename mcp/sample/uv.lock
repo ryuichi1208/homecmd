@@ -215,6 +215,9 @@ dependencies = [
     { name = "httpx" },
     { name = "mcp" },
     { name = "python-dotenv" },
+    { name = "strands-agents" },
+    { name = "strands-agents-builder" },
+    { name = "strands-agents-tools" },
 ]
 
 [package.metadata]
@@ -222,6 +225,9 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "mcp", specifier = ">=1.6.0" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
+    { name = "strands-agents", specifier = ">=0.0.1" },
+    { name = "strands-agents-builder", specifier = ">=0.0.1" },
+    { name = "strands-agents-tools", specifier = ">=0.0.1" },
 ]
 
 [[package]]
@@ -256,6 +262,39 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/04/1b/52b27f2e13ceedc79a908e29eac426a63465a1a01248e5f24aa36a62aeb3/starlette-0.46.1.tar.gz", hash = "sha256:3c88d58ee4bd1bb807c0d1acb381838afc7752f9ddaec81bbe4383611d833230", size = 2580102 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/4b/528ccf7a982216885a1ff4908e886b8fb5f19862d1962f56a3fce2435a70/starlette-0.46.1-py3-none-any.whl", hash = "sha256:77c74ed9d2720138b25875133f3a2dae6d854af2ec37dceb56aef370c1d8a227", size = 71995 },
+]
+
+[[package]]
+name = "strands-agents"
+version = "0.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1e/52/3bb888f85bd662d81d50a4755504caa0e855c696b2caa77f919264249053/strands_agents-0.0.1.tar.gz", hash = "sha256:2a7a5225f86d6b178ea2ccc390638010f9fb2be98079ce4963de09f3c994e617", size = 4837 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/9f/632899ae7cc6fc6dacd659706c6b06c9bec6bd2fbc782df96a890b28f188/strands_agents-0.0.1-py3-none-any.whl", hash = "sha256:7c1676d8dff1b858c03fd28174f62d2868eac1397598e207910224e727c74ef7", size = 5666 },
+]
+
+[[package]]
+name = "strands-agents-builder"
+version = "0.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "strands-agents" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/23/d3/59287572f25fd9a6acb1e342ef1acf54650d6f058ee35e5dcf431612434f/strands_agents_builder-0.0.1.tar.gz", hash = "sha256:0d2a23533f3b14dbdec75a447827d2383ed585c706fb0612876cdedbeba3ad5a", size = 4857 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c2/73/ddf69a59dbcbde85199a847cc406cf3527e81addaad89090966060b56d31/strands_agents_builder-0.0.1-py3-none-any.whl", hash = "sha256:7624059586ef22c8cf0a0e136dcfe48f14c0a2fe69d78de7095ee87c0f8d7d40", size = 5803 },
+]
+
+[[package]]
+name = "strands-agents-tools"
+version = "0.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "strands-agents" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0c/52/ae18e37bda0d01cd294907c79d52f164c319cd7e90b3606480c8430d3d03/strands_agents_tools-0.0.1.tar.gz", hash = "sha256:2490e0fde52155ead73bfaefe7b0bc382957890d3869173201d12f6fbe1348cb", size = 4944 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1d/e5/87440985fe5e6ca693f2f45fc2a3785f44c3d5d4ccc23479c0476eb84f65/strands_agents_tools-0.0.1-py3-none-any.whl", hash = "sha256:07a7fa3103aba9a114877bd1b07f65d381716b0c3c8c924ef3067f6c723e2e14", size = 5845 },
 ]
 
 [[package]]

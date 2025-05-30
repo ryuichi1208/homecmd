@@ -1,4 +1,4 @@
-FROM alpine:3.6
+FROM alpine:3.22
 
 ENV NGINX_VERSION 1.12.2-r2
 ENV NJS_VERSION   0.4.0

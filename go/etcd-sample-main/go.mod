@@ -2,7 +2,7 @@ module main
 
 go 1.21.4
 
-require go.etcd.io/etcd/client/v3 v3.5.11
+require go.etcd.io/etcd/client/v3 v3.6.1
 
 require (
 	github.com/coreos/go-semver v0.3.0 // indirect

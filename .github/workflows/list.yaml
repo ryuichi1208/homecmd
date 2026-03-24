@@ -1,21 +1,20 @@
-name: List Repository Files
+name: static analysis
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
 
 jobs:
-  list-files:
-    runs-on: ubuntu-latest
-
+  trivy:
+    runs-on: ubuntu-24.04
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: List files in the repository
-        run: |
-          echo "Listing all files in the repository:"
-          ls -R
-
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      
+      # 1. miseのセットアップだけを行う（install_argsは使わない）
+      - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2.4.4
+      
+      # 2. 独立したステップでインストールを実行する
+      - name: Install Trivy
+        run: mise install trivy
+        env:
+          MISE_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

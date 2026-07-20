@@ -7,7 +7,7 @@ jobs:
   trivy:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       
       # 1. miseのセットアップだけを行う（install_argsは使わない）
       - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2.4.4

@@ -23,7 +23,7 @@ require (
 	github.com/gen2brain/malgo v0.10.29
 	github.com/go-chat-bot/bot v0.0.0-20220127123339-71bc1bfb492c
 	github.com/go-chat-bot/plugins v0.0.0-20220303130347-e17663bb61bd
-	github.com/go-chi/chi v4.1.2+incompatible
+	github.com/go-chi/chi v4.1.3+incompatible
 	github.com/go-openapi/errors v0.20.0 // indirect
 	github.com/go-openapi/runtime v0.19.26 // indirect
 	github.com/go-openapi/validate v0.20.2 // indirect

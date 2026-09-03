@@ -10,7 +10,7 @@ require (
 	github.com/alexandre-normand/slackscot v1.48.0
 	github.com/alexedwards/scs/v2 v2.4.0
 	github.com/algoGuy/EasyMIDI v0.0.0-20180322051653-708ca39e7399
-	github.com/asticode/go-astilectron-bundler v0.7.8
+	github.com/asticode/go-astilectron-bundler v0.7.12
 	github.com/beldur/kraken-go-api-client v0.0.0-20210113103835-3f11c80eba1a // indirect
 	github.com/bitfinexcom/bitfinex-api-go v0.0.0-20210101155619-bb56f756df78 // indirect
 	github.com/bogem/id3v2 v1.2.0

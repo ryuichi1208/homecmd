@@ -58,7 +58,7 @@ require (
 	github.com/thebotguys/golang-bittrex-api v0.0.0-20210125125813-27a8629619aa // indirect
 	github.com/toorop/go-bittrex v0.0.2 // indirect
 	github.com/tosone/minimp3 v0.0.0-20200831154756-20dedd3e2ed2
-	github.com/valyala/fasthttp v1.21.0 // indirect
+	github.com/valyala/fasthttp v1.34.0 // indirect
 	github.com/volatiletech/authboss/v3 v3.0.3
 	github.com/wtolson/go-taglib v0.0.0-20210406152913-79209c280058
 	github.com/xyproto/permissions2 v0.0.0-20200902135438-05029d08c3f2
